@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Operational rules for the orchestrator during `/tf-plan-module` and `/tf-implement-module` workflow execution. Everything else — agent instructions, skill steps, constitution rules — lives in its own file and is loaded automatically.
+Operational rules for the orchestrator during `/tf-module-plan` and `/tf-module-implement` workflow execution. Everything else — agent instructions, skill steps, constitution rules — lives in its own file and is loaded automatically.
 
 ## Context Management
 

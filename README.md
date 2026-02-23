@@ -31,10 +31,10 @@ gh auth status        # GitHub CLI authenticated
 echo $TFE_TOKEN       # HCP Terraform token set
 
 # Run the full workflow (Understand -> Design -> Build+Test -> Validate)
-/tf-plan-module my-module aws - Creates an S3 bucket with encryption and versioning
+/tf-module-plan my-module aws - Creates an S3 bucket with encryption and versioning
 
 # Or implement from an existing design document
-/tf-implement-module my-module
+/tf-module-implement my-module
 ```
 
 ## Prerequisites
@@ -56,16 +56,16 @@ echo $TFE_TOKEN       # HCP Terraform token set
 ├── .claude/
 │   ├── CLAUDE.md                         # Project context for Claude Code
 │   ├── agents/                           # Agent definitions (4 agents)
-│   │   ├── sdd-design.md                 # Produces design.md from requirements + research
-│   │   ├── sdd-research.md               # Answers research questions via MCP tools
-│   │   ├── tf-test-writer.md             # Converts design scenarios to .tftest.hcl
-│   │   └── tf-task-executor.md           # Implements one checklist item from design.md
+│   │   ├── tf-module-design.md            # Produces design.md from requirements + research
+│   │   ├── tf-module-research.md          # Answers research questions via MCP tools
+│   │   ├── tf-module-test-writer.md       # Converts design scenarios to .tftest.hcl
+│   │   └── tf-module-developer.md         # Implements one checklist item from design.md
 │   └── skills/                           # Skill definitions (8 skills + 3 orchestrators)
-│       ├── tf-plan-module/              # Orchestrator: full 4-phase workflow
-│       ├── tf-implement-module/           # Orchestrator: TDD-aware implementation
-│       ├── tf-e2e-test-module/           # Orchestrator: automated E2E test harness
-│       ├── tf-domain-taxonomy/           # 8-category requirement scanning
-│       ├── tf-research-heuristics/       # MCP research strategies
+│       ├── tf-module-plan/               # Orchestrator: full 4-phase workflow
+│       ├── tf-module-implement/           # Orchestrator: TDD-aware implementation
+│       ├── tf-module-e2e/                # Orchestrator: automated E2E test harness
+│       ├── tf-domain-category/           # 8-category requirement scanning
+│       ├── tf-research/                  # MCP research strategies
 │       ├── tf-architecture-patterns/     # Module architecture patterns
 │       ├── tf-implementation-patterns/   # Terraform code patterns
 │       ├── terraform-test/               # Terraform test patterns (.tftest.hcl)
@@ -74,7 +74,8 @@ echo $TFE_TOKEN       # HCP Terraform token set
 │       └── tf-security-baselines/        # CIS/NIST security baselines
 ├── .foundations/
 │   ├── memory/
-│   │   └── constitution.md               # Non-negotiable rules for all agents
+│   │   ├── module-constitution.md         # Non-negotiable rules for module agents
+│   │   └── provider-constitution.md      # Non-negotiable rules for provider agents
 │   ├── templates/
 │   │   └── module-design-template.md      # Standardized template for design.md
 │   └── scripts/bash/
@@ -114,10 +115,10 @@ Agents are subagents dispatched by orchestrator skills. Each agent has a single 
 
 | Agent | Purpose |
 |-------|---------|
-| `sdd-design` | Produces `design.md` from clarified requirements and research findings |
-| `sdd-research` | Answers one specific research question using MCP tools |
-| `tf-test-writer` | Converts design.md test scenarios into `.tftest.hcl` files |
-| `tf-task-executor` | Implements one checklist item from design.md |
+| `tf-module-design` | Produces `design.md` from clarified requirements and research findings |
+| `tf-module-research` | Answers one specific research question using MCP tools |
+| `tf-module-test-writer` | Converts design.md test scenarios into `.tftest.hcl` files |
+| `tf-module-developer` | Implements one checklist item from design.md |
 
 ## Skill Architecture
 
@@ -127,9 +128,9 @@ Skills provide domain knowledge and orchestration logic, loaded into agent conte
 
 | Skill | Purpose |
 |-------|---------|
-| `tf-plan-module` | Full 4-phase workflow entry point: Understand, Design, Build+Test, Validate |
-| `tf-implement-module` | TDD-aware implementation: write tests first, run after each phase |
-| `tf-e2e-test-module` | Automated E2E test harness: runs full workflow cycle with test defaults |
+| `tf-module-plan` | Full 4-phase workflow entry point: Understand, Design, Build+Test, Validate |
+| `tf-module-implement` | TDD-aware implementation: write tests first, run after each phase |
+| `tf-module-e2e` | Automated E2E test harness: runs full workflow cycle with test defaults |
 
 ### Domain Knowledge — User-Invocable
 
@@ -144,7 +145,7 @@ Skills provide domain knowledge and orchestration logic, loaded into agent conte
 
 | Skill | Purpose |
 |-------|---------|
-| `tf-domain-taxonomy` | 8-category taxonomy for scanning requirements and identifying gaps |
+| `tf-domain-category` | 8-category taxonomy for scanning requirements and identifying gaps |
 | `tf-research-heuristics` | Strategies for MCP research -- tools, order, what to look for |
 | `tf-report-template` | Validation results summary template |
 | `tf-security-baselines` | CIS/NIST security baselines and risk rating framework |
@@ -168,7 +169,7 @@ tests/
 
 ## Contributing
 
-Follow the constitution at `.foundations/memory/module-constitution.md`. Use `/tf-plan-module` for new modules. All agents and skills follow the conventions documented in `AGENTS.md`.
+Follow the constitution at `.foundations/memory/module-constitution.md`. Use `/tf-module-plan` for new modules. All agents and skills follow the conventions documented in `AGENTS.md`.
 
 When adding new agents or skills:
 - Agent definitions go in `.claude/agents/` as Markdown files

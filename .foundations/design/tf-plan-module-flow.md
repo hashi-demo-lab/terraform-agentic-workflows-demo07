@@ -1,6 +1,6 @@
 # tf-plan-module Flow Diagram
 
-Mapping of the `tf-plan-module` orchestrator skill and its interaction with the `sdd-research` and `sdd-design` agents.
+Mapping of the `tf-plan-module` orchestrator skill and its interaction with the `tf-module-research` and `tf-module-design` agents.
 
 ## Full Flow
 
@@ -31,7 +31,7 @@ Mapping of the `tf-plan-module` orchestrator skill and its interaction with the 
 │  │  Step 4: create-new-feature.sh → capture $FEATURE branch          │  │
 │  │                │                                                   │  │
 │  │                ▼                                                   │  │
-│  │  Step 5: Scan requirements against tf-domain-taxonomy              │  │
+│  │  Step 5: Scan requirements against tf-domain-category              │  │
 │  │          (8-category ambiguity scan)                               │  │
 │  │          Always flag security-configurable features                │  │
 │  │                │                                                   │  │
@@ -43,10 +43,10 @@ Mapping of the `tf-plan-module` orchestrator skill and its interaction with the 
 │  │          └──────────────┬───────────────────┘                      │  │
 │  │                         │                                          │  │
 │  │                         ▼                                          │  │
-│  │  Step 7: Launch 3-4 CONCURRENT sdd-research agents                 │  │
+│  │  Step 7: Launch 3-4 CONCURRENT tf-module-research agents                 │  │
 │  │                                                                    │  │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │  │
-│  │  │ sdd-research │ │ sdd-research │ │ sdd-research │ │sdd-resrch│ │  │
+│  │  │ tf-module-research │ │ tf-module-research │ │ tf-module-research │ │sdd-resrch│ │  │
 │  │  │  (Agent 1)   │ │  (Agent 2)   │ │  (Agent 3)   │ │(Agent 4) │ │  │
 │  │  │              │ │              │ │              │ │ optional  │ │  │
 │  │  │ Provider     │ │ AWS best     │ │ Registry     │ │ Edge     │ │  │
@@ -80,9 +80,9 @@ Mapping of the `tf-plan-module` orchestrator skill and its interaction with the 
 │  PHASE 2: DESIGN                                                         │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
 │  │                                                                    │  │
-│  │  Step 8: Launch sdd-design agent                                   │  │
+│  │  Step 8: Launch tf-module-design agent                                   │  │
 │  │  ┌──────────────────────────────────────────────────────────────┐  │  │
-│  │  │               sdd-design (Agent)                              │  │  │
+│  │  │               tf-module-design (Agent)                              │  │  │
 │  │  │                                                              │  │  │
 │  │  │  INPUT (via $ARGUMENTS):                                     │  │  │
 │  │  │  - FEATURE path                                              │  │  │
@@ -120,7 +120,7 @@ Mapping of the `tf-plan-module` orchestrator skill and its interaction with the 
 │  │                         │                                          │  │
 │  │                         ▼                                          │  │
 │  │  Step 9:  Glob — specs/{FEATURE}/design.md exists?                 │  │
-│  │           No? → Re-launch sdd-design once                          │  │
+│  │           No? → Re-launch tf-module-design once                          │  │
 │  │                         │ Yes                                      │  │
 │  │                         ▼                                          │  │
 │  │  Step 10: Grep — all 7 sections present?                           │  │
@@ -156,7 +156,7 @@ Mapping of the `tf-plan-module` orchestrator skill and its interaction with the 
 │                             ▼                                            │
 │  DONE                                                                    │
 │  Design approved at specs/{FEATURE}/design.md                            │
-│  Run /tf-implement-module $FEATURE to build.                                    │
+│  Run /tf-module-implement $FEATURE to build.                                    │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -173,7 +173,7 @@ tf-plan-module orchestrator
     │         ▼
     │    Clarified requirements ─────────────────────────────────┐
     │                                                            │
-    ├──▶ 3-4x sdd-research agents (concurrent, in-memory)       │
+    ├──▶ 3-4x tf-module-research agents (concurrent, in-memory)       │
     │    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
     │    │ Provider  │ │ AWS best │ │ Registry │ │ Edge     │   │
     │    │ docs Q    │ │ practice │ │ patterns │ │ cases    │   │
@@ -183,10 +183,10 @@ tf-plan-module orchestrator
     │              Research findings (in-memory) ────────────────┤
     │                                                            │
     │                                                            ▼
-    ├──▶ sdd-design agent ◀──── requirements + findings + $FEATURE
+    ├──▶ tf-module-design agent ◀──── requirements + findings + $FEATURE
     │         │
     │         │  Also reads (itself):
-    │         │  - constitution.md
+    │         │  - module-constitution.md
     │         │  - module-design-template.md
     │         │
     │         ▼
@@ -197,7 +197,7 @@ tf-plan-module orchestrator
     └──▶ User approval gate (AskUserQuestion)
               │
               ▼
-         /tf-implement-module picks up from here
+         /tf-module-implement picks up from here
 ```
 
 ## Handoff to tf-implement-module
@@ -223,18 +223,18 @@ No other files, no shared state, no intermediate research artifacts.
 
 1. **Single artifact output (P1)**: The entire planning phase produces exactly one file: `specs/{FEATURE}/design.md`. No research files, no separate specs, no intermediate artifacts.
 
-2. **Research feeds design, not files (P4)**: The sdd-research agents return findings in-memory. The orchestrator passes these to sdd-design via `$ARGUMENTS`. Nothing is written to disk. This prevents terminology drift from intermediate research artifacts.
+2. **Research feeds design, not files (P4)**: The tf-module-research agents return findings in-memory. The orchestrator passes these to tf-module-design via `$ARGUMENTS`. Nothing is written to disk. This prevents terminology drift from intermediate research artifacts.
 
 3. **Security embedded in design (P3)**: Security is woven through at three points:
    - Step 5: Ambiguity scan flags security-configurable features
    - Step 6: Mandatory security-defaults clarification question
-   - sdd-design agent: Mandatory Section 4 (Security Controls) with CIS/WA references, plus security assertions required in Section 5 tests
+   - tf-module-design agent: Mandatory Section 4 (Security Controls) with CIS/WA references, plus security assertions required in Section 5 tests
 
 4. **Orchestrator directs, doesn't accumulate (P6)**: The orchestrator passes short context (requirements, findings summary, file paths) to agents. It verifies design.md exists via Glob and checks section presence via Grep. It never reads the full design content itself.
 
-5. **Phase order is fixed (P8)**: Understand must complete before Design starts. Research agents must all return before sdd-design launches. User must approve before /tf-implement-module can run.
+5. **Phase order is fixed (P8)**: Understand must complete before Design starts. Research agents must all return before tf-module-design launches. User must approve before /tf-module-implement can run.
 
-6. **Agents have one job (P5)**: Each sdd-research agent answers exactly ONE question. The sdd-design agent takes requirements + findings and produces exactly ONE file.
+6. **Agents have one job (P5)**: Each tf-module-research agent answers exactly ONE question. The tf-module-design agent takes requirements + findings and produces exactly ONE file.
 
 ### One Thing to Watch
 

@@ -13,7 +13,7 @@ tools:
   - Grep
 ---
 
-# tf-test-writer
+# tf-module-test-writer
 
 Convert design.md Section 5 (Test Scenarios) into `.tftest.hcl` test files and write module scaffolding (`versions.tf`, `variables.tf`). Tests are written BEFORE module code. The generated tests will initially fail, then pass as implementation progresses.
 

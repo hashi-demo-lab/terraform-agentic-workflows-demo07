@@ -24,7 +24,7 @@ These overrides replace interactive prompts with test defaults:
 
 | Override        | Behavior                                                                    |
 | --------------- | --------------------------------------------------------------------------- |
-| Requirements    | Read from `.claude/skills/tf-e2e-test-module/prompts/$PROMPT_FILE`               |
+| Requirements    | Read from `.claude/skills/tf-module-e2e/prompts/$PROMPT_FILE`               |
 | AskUserQuestion | Use test defaults, do not prompt                                            |
 | Approval gates  | Auto-approve, do not wait                                                   |
 | Destroy sandbox | Always yes                                                                  |
@@ -40,24 +40,24 @@ Follow `/tf-module-plan` skill phases with these E2E-specific differences:
   ```bash
   gh issue create --title "E2E Test: $PROMPT_FILE" --label "test:e2e" --body "$(cat .claude/skills/tf-module-e2e/prompts/$PROMPT_FILE)"
   ```
-- **Phase 2 Design**: sdd-design agent produces `design.md` using test defaults for any decisions; do not use `AskUserQuestion`
+- **Phase 2 Design**: tf-module-design agent produces `design.md` using test defaults for any decisions; do not use `AskUserQuestion`
 - **Phase 3 Summary**: Do NOT add `agent:awaiting-review` label. Do NOT stop for approval. Proceed directly to implementation.
 
 ### Planning Artifact Validation
 
 After planning completes, verify the following artifact exists before proceeding:
 
-- `design.md` — consolidated design document (produced by sdd-design agent)
+- `design.md` — consolidated design document (produced by tf-module-design agent)
 
 ---
 
 ## PART 2: IMPLEMENTATION
 
-Follow `/tf-implement-module` skill phases (TDD-aware, reads design.md) with these E2E-specific differences:
+Follow `/tf-module-implement` skill phases (TDD-aware, reads design.md) with these E2E-specific differences:
 
 - **Phase 1 Prerequisites**: Use issue number from Part 1. The tf-implement workflow reads `design.md` for implementation guidance.
-- **Phase 2 Test Writing**: tf-test-writer agent generates test files before implementation code.
-- **Phase 3 Implementation**: tf-task-executor agent implements code to pass tests. Commit messages use `test(e2e): implement phase N - <description>`
+- **Phase 2 Test Writing**: tf-module-test-writer agent generates test files before implementation code.
+- **Phase 3 Implementation**: tf-module-developer agent implements code to pass tests. Commit messages use `test(e2e): implement phase N - <description>`
 - **Phase 4 Cleanup**: git push (do NOT create PR). Optionally destroy sandbox resources. Close issue with `test:passed` or `test:failed` label.
 
 ### Implementation Test Expectations

@@ -16,8 +16,8 @@ See the root `./AGENTS.md` for the main project documentation, workflow phases, 
 
 | Command         | Purpose                                                           |
 | --------------- | ----------------------------------------------------------------- |
-| `/tf-plan-module` | Full 4-phase workflow: Clarify, Design, Implement (TDD), Validate |
-| `/tf-implement-module` | Implementation only — starts from an existing `design.md`         |
+| `/tf-module-plan` | Full 4-phase workflow: Clarify, Design, Implement (TDD), Validate |
+| `/tf-module-implement` | Implementation only — starts from an existing `design.md`         |
 | `/tf-provider-plan` | Full 4-phase workflow for provider resources: Clarify, Design, Implement, Validate |
 | `/tf-provider-implement` | Implementation only — starts from an existing provider `design.md` |
 
@@ -37,7 +37,7 @@ When creating design documents, use the canonical template for the relevant work
 
 ## Key Conventions
 
-- Workflow conventions are defined in the orchestrator skills (`tf-plan-module`, `tf-implement-module`, `tf-provider-plan`, `tf-provider-implement`). Follow AGENTS.md `## Context Management` for subagent rules.
+- Workflow conventions are defined in the orchestrator skills (`tf-module-plan`, `tf-module-implement`, `tf-provider-plan`, `tf-provider-implement`). Follow AGENTS.md `## Context Management` for subagent rules.
 - Key scripts: `validate-env.sh` (environment checks), `post-issue-progress.sh` (GitHub updates), `checkpoint-commit.sh` (git automation) — all in `.foundations/scripts/bash/`.
 
 ## Updating AGENTS.md Files

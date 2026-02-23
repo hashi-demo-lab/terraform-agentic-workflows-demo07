@@ -32,4 +32,4 @@ Checkpoint after each phase: `bash .foundations/scripts/bash/checkpoint-commit.s
 
 ## Done
 
-Design approved at `specs/{FEATURE}/design.md`. Run `/tf-implement-module $FEATURE` to build.
+Design approved at `specs/{FEATURE}/design.md`. Run `/tf-module-implement $FEATURE` to build.

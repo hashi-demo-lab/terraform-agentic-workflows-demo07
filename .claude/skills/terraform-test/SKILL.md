@@ -15,7 +15,7 @@ The SDD workflow adopts a **test-first approach** for Terraform modules. Tests a
 
 ### Test-First Principle
 
-1. **Test files (.tftest.hcl) are written BEFORE module code.** The `tf-test-writer` agent reads `design.md` Section 5 (Test Scenarios) and generates complete test files before any `.tf` files exist.
+1. **Test files (.tftest.hcl) are written BEFORE module code.** The `tf-module-test-writer` agent reads `design.md` Section 5 (Test Scenarios) and generates complete test files before any `.tf` files exist.
 2. **Tests are expected to FAIL initially.** This is by design -- a failing test confirms the test is actually exercising real conditions. The red-green-refactor cycle applies:
    - **Red**: Tests fail because the module code does not yet exist
    - **Green**: Implementation is added until tests pass
@@ -29,7 +29,7 @@ The SDD workflow adopts a **test-first approach** for Terraform modules. Tests a
 design.md Section 5 (Test Scenarios)
         |
         v
-tf-test-writer generates .tftest.hcl files
+tf-module-test-writer generates .tftest.hcl files
         |
         v
 terraform test --> ALL FAIL (expected)

@@ -1,12 +1,12 @@
-# tf-implement-module Flow Diagram
+# tf-module-implement Flow Diagram
 
-Mapping of the `tf-implement-module` orchestrator skill and its interaction with the `tf-test-writer` and `tf-task-executor` agents.
+Mapping of the `tf-module-implement` orchestrator skill and its interaction with the `tf-module-test-writer` and `tf-module-developer` agents.
 
 ## Full Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     tf-implement-module (Orchestrator Skill)               │
+│                     tf-module-implement (Orchestrator Skill)               │
 │                        Phases 3 + 4                                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -22,9 +22,9 @@ Mapping of the `tf-implement-module` orchestrator skill and its interaction with
 │  PHASE 3: BUILD + TEST                                              │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │                                                              │   │
-│  │  Step 5: Launch tf-test-writer agent                         │   │
+│  │  Step 5: Launch tf-module-test-writer agent                         │   │
 │  │  ┌────────────────────────────────────────────────────────┐  │   │
-│  │  │           tf-test-writer (Agent)                        │  │   │
+│  │  │           tf-module-test-writer (Agent)                        │  │   │
 │  │  │                                                        │  │   │
 │  │  │  INPUT:  design.md Sections 2, 3, 5                    │  │   │
 │  │  │                                                        │  │   │
@@ -53,7 +53,7 @@ Mapping of the `tf-implement-module` orchestrator skill and its interaction with
 │  │  Step 9: FOR EACH checklist item:                            │   │
 │  │  ┌──────────────────────────────────────────────────────┐    │   │
 │  │  │  ┌──────────────────────────────────────────────┐    │    │   │
-│  │  │  │       tf-task-executor (Agent)                │    │    │   │
+│  │  │  │       tf-module-developer (Agent)                │    │    │   │
 │  │  │  │                                              │    │    │   │
 │  │  │  │  INPUT:  design.md + checklist item desc     │    │    │   │
 │  │  │  │                                              │    │    │   │
@@ -77,7 +77,7 @@ Mapping of the `tf-implement-module` orchestrator skill and its interaction with
 │  │                         │                                    │   │
 │  │                         ▼                                    │   │
 │  │  Step 10: terraform test (final)                             │   │
-│  │           Failures? ──Yes──▶ Re-launch tf-test-writer with   │   │
+│  │           Failures? ──Yes──▶ Re-launch tf-module-test-writer with   │   │
 │  │                              error output + data source info  │   │
 │  │           │                                                  │   │
 │  │           ▼ No                                               │   │
@@ -112,7 +112,7 @@ design.md ──────────────┬────────�
   (Sections 2, 3, 5)    │              (Sections 2, 3, 4, 6)   │
                          ▼                                      ▼
                ┌─────────────────┐              ┌──────────────────────┐
-               │ tf-test-writer  │              │  tf-task-executor    │
+               │ tf-module-test-writer  │              │  tf-module-developer    │
                │                 │              │  (per checklist item)│
                └────────┬────────┘              └──────────┬───────────┘
                         │                                  │
@@ -123,7 +123,7 @@ design.md ──────────────┬────────�
                         │                                  │
                         └──────────┬───────────────────────┘
                                    ▼
-                        tf-implement-module orchestrator
+                        tf-module-implement orchestrator
                         (validates, tests, commits)
 ```
 
@@ -133,16 +133,16 @@ design.md ──────────────┬────────�
 
 ### What's Right
 
-1. **Test-first ordering (P2)**: tf-test-writer runs before any tf-task-executor. Tests and scaffolding exist before implementation code. The RED baseline at step 7 confirms tests parse but nothing passes yet.
+1. **Test-first ordering (P2)**: tf-module-test-writer runs before any tf-module-developer. Tests and scaffolding exist before implementation code. The RED baseline at step 7 confirms tests parse but nothing passes yet.
 
 2. **Single artifact (P1)**: Everything flows from `design.md`. No intermediate files are created between agents.
 
-3. **Agent single-responsibility (P5)**: tf-test-writer reads design and produces tests + scaffolding. tf-task-executor reads design + checklist item and produces .tf code. Clean separation.
+3. **Agent single-responsibility (P5)**: tf-module-test-writer reads design and produces tests + scaffolding. tf-module-developer reads design + checklist item and produces .tf code. Clean separation.
 
-4. **Orchestrator directs, doesn't accumulate (P6)**: tf-implement-module checks file existence via Glob, passes file paths and item descriptions to agents, and runs validation commands. It doesn't read/merge agent outputs.
+4. **Orchestrator directs, doesn't accumulate (P6)**: tf-module-implement checks file existence via Glob, passes file paths and item descriptions to agents, and runs validation commands. It doesn't read/merge agent outputs.
 
-5. **Fix cycle at step 10**: If tests still fail after all items, tf-test-writer is re-launched with error context. This handles the case where task executors introduce data sources that tests didn't originally mock.
+5. **Fix cycle at step 10**: If tests still fail after all items, tf-module-test-writer is re-launched with error context. This handles the case where task executors introduce data sources that tests didn't originally mock.
 
 ### One Tension Worth Noting
 
-The tf-task-executor runs `terraform test` internally (its step 7), and then the orchestrator *also* runs `terraform validate + terraform test` after the executor returns (orchestrator step 9). This is redundant but harmless — the orchestrator's run acts as a trust-but-verify gate. The executor's internal run gives it feedback to self-correct within its own scope, while the orchestrator's run is the authoritative check. This is consistent with P6 (orchestrator verifies state, doesn't trust agent reports blindly).
+The tf-module-developer runs `terraform test` internally (its step 7), and then the orchestrator *also* runs `terraform validate + terraform test` after the executor returns (orchestrator step 9). This is redundant but harmless — the orchestrator's run acts as a trust-but-verify gate. The executor's internal run gives it feedback to self-correct within its own scope, while the orchestrator's run is the authoritative check. This is consistent with P6 (orchestrator verifies state, doesn't trust agent reports blindly).

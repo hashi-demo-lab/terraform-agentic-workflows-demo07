@@ -2,7 +2,7 @@
 
 **IMPORTANT** - Do not prompt me, make best practice decisions independently (this is for prompt eval)
 
-Using the **tf-e2e-test-module** skill non-interactively.
+Using the **tf-module-e2e** skill non-interactively.
 
 ## Infrastructure Requirements
 
