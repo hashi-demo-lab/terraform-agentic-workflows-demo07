@@ -12,7 +12,7 @@ Produces `specs/{FEATURE}/design.md` from requirements. Stops for human approval
 Post progress at key steps: `bash .foundations/scripts/bash/post-issue-progress.sh $ISSUE_NUMBER "<step>" "<status>" "<summary>"`. Valid status values: `started`, `in-progress`, `complete`, `failed`.
 Checkpoint after each phase: `bash .foundations/scripts/bash/checkpoint-commit.sh "<step_name>"`. The `<step_name>` must be a short hyphenated identifier (e.g., `"clarify"`, `"research-and-design"`, `"design-approved"`) — NOT a sentence or file path.
 
-## Phase 1: Understand
+## Phase 1: Requirements & Research
 
 1. Run `bash .foundations/scripts/bash/validate-env.sh --json`. Stop if `gate_passed=false`.
 2. Parse `$ARGUMENTS` for module name, provider, and description. Ask via `AskUserQuestion` if incomplete.

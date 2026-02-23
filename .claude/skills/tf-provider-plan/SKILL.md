@@ -12,7 +12,7 @@ Produces `specs/{FEATURE}/provider-design-{resource}.md` from requirements. Stop
 Post progress at key steps: `bash .foundations/scripts/bash/post-issue-progress.sh $ISSUE_NUMBER "<step>" "<status>" "<summary>"`. Valid status values: `started`, `in-progress`, `complete`, `failed`.
 Checkpoint after each phase: `bash .foundations/scripts/bash/checkpoint-commit.sh "<step_name>"`. The `<step_name>` must be a short hyphenated identifier (e.g., `"clarify"`, `"research-and-design"`, `"design-approved"`) — NOT a sentence or file path.
 
-## Phase 1: Understand
+## Phase 1: Requirements & Research
 
 1. Run `bash .foundations/scripts/bash/validate-env.sh --json`. Stop if `gate_passed=false`. Then separately verify Go is available: `go version` (Go >= 1.21 required). Stop if Go is not installed or version is insufficient.
 2. Parse `$ARGUMENTS` for resource name (pattern: `{provider}_{service}_{resource}`), provider name, and description. Derive `$RESOURCE` short name (e.g., `bucket` from `mycloud_storage_bucket`). Ask via `AskUserQuestion` if incomplete.
