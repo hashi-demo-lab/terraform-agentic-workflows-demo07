@@ -1,5 +1,5 @@
 ---
-name: new-terraform-provider
+name: provider-new-terraform-provider
 description: Use this when scaffolding a new Terraform provider.
 license: MPL-2.0
 metadata:
