@@ -76,7 +76,7 @@ echo $TFE_TOKEN       # HCP Terraform token set
 │   ├── memory/
 │   │   └── constitution.md               # Non-negotiable rules for all agents
 │   ├── templates/
-│   │   └── design-template.md            # Standardized template for design.md
+│   │   └── module-design-template.md      # Standardized template for design.md
 │   └── scripts/bash/
 │       ├── validate-env.sh               # Environment validation (Phase 1)
 │       ├── checkpoint-commit.sh          # Progress checkpoint commits

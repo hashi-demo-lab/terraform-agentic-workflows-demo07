@@ -91,7 +91,7 @@ Mapping of the `tf-plan-module` orchestrator skill and its interaction with the 
 │  │  │                                                              │  │  │
 │  │  │  READS ITSELF:                                               │  │  │
 │  │  │  - .foundations/memory/module-constitution.md                        │  │  │
-│  │  │  - .foundations/templates/design-template.md                  │  │  │
+│  │  │  - .foundations/templates/module-design-template.md            │  │  │
 │  │  │                                                              │  │  │
 │  │  │  PRODUCES 7 SECTIONS:                                        │  │  │
 │  │  │  ┌────────────────────────────────────────────────────────┐  │  │  │
@@ -187,7 +187,7 @@ tf-plan-module orchestrator
     │         │
     │         │  Also reads (itself):
     │         │  - constitution.md
-    │         │  - design-template.md
+    │         │  - module-design-template.md
     │         │
     │         ▼
     │    specs/{FEATURE}/design.md   ◀── SINGLE OUTPUT ARTIFACT

@@ -32,7 +32,7 @@ Non-negotiable rules for all code generation live in the constitutions. Read the
 
 When creating design documents, use the canonical template for the relevant workflow:
 
-- **Module design**: `.foundations/templates/design-template.md`
+- **Module design**: `.foundations/templates/module-design-template.md`
 - **Provider design**: `.foundations/templates/provider-design-template.md`
 
 ## Key Conventions

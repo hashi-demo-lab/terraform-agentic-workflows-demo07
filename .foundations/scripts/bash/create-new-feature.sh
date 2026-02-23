@@ -326,7 +326,7 @@ fi
 FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
 mkdir -p "$FEATURE_DIR"
 
-TEMPLATE="$REPO_ROOT/.foundations/templates/design-template.md"
+TEMPLATE="$REPO_ROOT/.foundations/templates/module-design-template.md"
 DESIGN_FILE="$FEATURE_DIR/design.md"
 if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$DESIGN_FILE"; else touch "$DESIGN_FILE"; fi
 

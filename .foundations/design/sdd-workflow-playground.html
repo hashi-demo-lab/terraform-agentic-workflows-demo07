@@ -779,7 +779,7 @@ body.has-selection .node.dimmed { opacity: var(--dim); }
             <div class="node node-skill" data-id="tf-security-baselines" data-type="skill">tf-security-baselines</div>
           </div>
           <div class="node-row">
-            <div class="node node-template" data-id="design-template" data-type="template">design-template.md</div>
+            <div class="node node-template" data-id="module-design-template" data-type="template">module-design-template.md</div>
             <div class="node node-ref" data-id="constitution" data-type="ref">constitution.md</div>
           </div>
           <div class="step-note">sdd-design receives requirements + findings via $ARGUMENTS. Reads constitution and template itself (P9). Produces all 7 sections. Validates completeness before writing.</div>
@@ -1238,7 +1238,7 @@ const viewConfig = {
 /* === Node descriptions === */
 const nodeDesc = {
   'sdd-research':       'Investigates ONE research question per instance via AWS docs, provider docs, and Terraform registry. Runs 3-4 concurrently in Phase 1. Returns findings in-memory (<500 tokens) \u2014 never writes to disk (P4). Uses tf-research-heuristics skill for search strategies.',
-  'sdd-design':         'Produces specs/{FEATURE}/design.md from clarified requirements and research findings. Reads constitution.md and design-template.md itself (P9). Populates all 7 mandatory sections. Validates completeness before writing: every variable has type+description, every security control has CIS/WA reference, every test scenario has \u22652 assertions, checklist has 4-8 items.',
+  'sdd-design':         'Produces specs/{FEATURE}/design.md from clarified requirements and research findings. Reads constitution.md and module-design-template.md itself (P9). Populates all 7 mandatory sections. Validates completeness before writing: every variable has type+description, every security control has CIS/WA reference, every test scenario has \u22652 assertions, checklist has 4-8 items.',
   'tf-test-writer':     'Reads design.md Sections 2 (Interface Contract), 3 (Resources & Architecture), and 5 (Test Scenarios). Writes scaffolding (versions.tf, variables.tf) and 4 test files: basic.tftest.hcl, complete.tftest.hcl, edge_cases.tftest.hcl, validation.tftest.hcl. Maps 1:1 from design assertions to HCL assert blocks. Runs BEFORE implementation code (P2).',
   'tf-task-executor':   'Executes one implementation checklist item from design.md Section 6. Reads Sections 2 (variables), 3 (resources), 4 (security) for context. Writes/edits .tf files, runs terraform fmt + validate + test, marks item [x] in design.md. Reports files modified and test pass/fail counts. Uses MCP for provider and AWS doc lookups.',
   'tf-domain-taxonomy':     '8-category ambiguity taxonomy: resource scope, feature toggles, networking, IAM, encryption, naming, scaling, dependencies. Used by orchestrator at Step 5 to flag underspecified requirements. Always flags security-configurable features.',

@@ -64,7 +64,7 @@ their 4 subagents, and ~10 supporting skills.
   ```
 - `tf-module-test-writer.md:214` — `four test files`
 - `tf-module-test-writer.md:222-228` (Output section) lists 4 files including `tests/edge_cases.tftest.hcl`
-- `design-template.md:105` — defines 5 scenario groups mapping to 4 files (Feature Interactions and edge cases map to `edge_cases.tftest.hcl`)
+- `module-design-template.md:105` — defines 5 scenario groups mapping to 4 files (Feature Interactions and edge cases map to `edge_cases.tftest.hcl`)
 
 **Impact**: The constitution is the authoritative reference for module structure. Its omission of `edge_cases.tftest.hcl` means the documented file tree is incomplete. Agents or humans consulting only the constitution will have an inaccurate picture of expected test artifacts.
 
