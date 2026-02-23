@@ -8,26 +8,25 @@ user-invocable: false
 
 ## Parallel Research Pattern
 
-In Phase 1 (Understand) spawns **3-4 parallel `sdd-research` agents**, each answering ONE research question. Each agent uses these heuristics independently. A typical module launches agents covering:
-
-| Agent Focus | Primary MCP Tools | Question Type |
+|  Focus | Primary MCP Tools | Question Type |
 |-------------|-------------------|---------------|
 | Provider resources | `search_providers` + `get_provider_details` | How do the main resources work? Arguments, attributes, gotchas? |
-| AWS best practices | `search_documentation` + `read_documentation` | What does AWS recommend? Security controls? |
+
 | Registry patterns | `search_modules` + `get_module_details` | How do popular modules structure their interface? |
 | Edge cases | `search_documentation` (troubleshooting) | What breaks? Common mistakes? |
 
-All research agents run as **parallel foreground Task calls** (NOT `run_in_background`). Launch ALL in a single message, then wait for all to complete before proceeding to Phase 2 (Design).
 
 ## Research Priority Order
 
 When developing module resources, research in this order:
 
-1. **AWS Documentation** — Understand the service, its features, limits, and best practices
-2. **Provider Documentation** — Understand resource arguments, attributes, and behavior
-3. **Public Registry Patterns** — Study well-regarded modules for design conventions and interfaces
-4. **Private Registry** — Check if the organization has existing modules to learn from or avoid duplication
-5. **Security-Adjacent Resources** — For each resource in the module, research what companion resources AWS recommends for security (e.g., bucket policies for TLS enforcement, ownership controls, access logging). Use `search_documentation("[service] security best practices")`.
+1. **Provider Documentation** — Understand resource arguments, attributes, and behavior
+2. **Public Registry Patterns** — Study well-regarded modules for design conventions and interfaces
+3. **Private Registry** — Check if the organization has existing modules to learn from or avoid duplication
+4. **AWS Documentation** — Verify service behavior, limits, and best practices (e.g., security controls)
+
+
+4. **Security-Adjacent Resources** — For each resource in the module, research what companion resources AWS recommends for security (e.g., bucket policies for TLS enforcement, ownership controls, access logging). Use `search_documentation("[service] security best practices")`.
 
 ## Provider Documentation Strategy
 
@@ -93,9 +92,10 @@ For each research question, document:
 - [conditional creation approach, variable interface, defaults]
 
 **References**:
-- [AWS doc URL]
+- [Cloud Service Provider documentation URL]
 - [Provider doc URL]
 - [Public module pattern URL if studied]
+- [CIS/NIST/OWASP citation]
 ```
 
 ## Common Research Pitfalls
@@ -104,4 +104,4 @@ For each research question, document:
 2. **Missing computed attributes** — Check what the resource exports. Some attributes are only available after apply.
 3. **Ignoring deprecation warnings** — Provider docs note deprecated arguments. Use the recommended replacement.
 4. **Over-constraining provider versions** — Modules should use `>=` constraints, not `~>`, to maximize consumer compatibility.
-5. **Skipping security research** — Always search for "[service] security best practices" for each AWS service used.
+
