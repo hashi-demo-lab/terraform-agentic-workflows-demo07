@@ -34,7 +34,7 @@ Checkpoint after each phase: `bash .foundations/scripts/bash/checkpoint-commit.s
 
 10. Launch `tf-provider-validator` agent with `$DESIGN_FILE` and service directory. Review output; if auto-fixes were applied, run `go build -o /dev/null .` to confirm fixes compile.
 11. If remaining issues reported by validator, launch `tf-provider-developer` agent targeted at the specific issues (max 2 fix rounds). Run `go build` and `go vet` after each fix round.
-12. Ask user via `AskUserQuestion` whether to run acceptance tests (`TF_ACC=1`, real API credentials). If confirmed, launch `tf-provider-validator` with `run_acceptance_tests=true` and test pattern from user. Report pass/fail per test function.
+12. Run acceptance tests
 13. Write validation report to `specs/{FEATURE}/reports/` by reading the `tf-report-template` skill inline and applying the provider template format (`tf-report-template/template/tf-provider-template.md`). This is not a subagent dispatch — write the report directly.
 14. Checkpoint commit, push branch, create PR linking to `$ISSUE_NUMBER`.
 
