@@ -4,10 +4,13 @@ set -euo pipefail
 
 echo "=== Post-Create Setup Starting ==="
 
-# Fix permissions for command history volume (Docker volumes are root-owned)
+# Fix permissions for Docker volumes (Docker volumes are root-owned)
 sudo chown -R node:node /commandhistory
 touch /commandhistory/.zsh_history
 touch /commandhistory/.bash_history
+
+sudo chown -R node:node /home/node/.claude
+chmod 700 /home/node/.claude
 
 # Configure Terraform credentials for HCP Terraform
 if [ -n "${TFE_TOKEN:-}" ]; then
