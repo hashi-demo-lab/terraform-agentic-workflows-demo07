@@ -1,3 +1,26 @@
+```
+ ____   ___    _   _  ___ _____   _   _ ____  _____
+|  _ \ / _ \  | \ | |/ _ \_   _| | | | / ___|| ____|
+| | | | | | | |  \| | | | || |   | | | \___ \|  _|
+| |_| | |_| | | |\  | |_| || |   | |_| |___) | |___
+|____/ \___/  |_| \_|\___/ |_|    \___/|____/|_____|
+
+ __  __  _____     _______ ____
+|  \/  |/ _ \ \   / / ____|  _ \
+| |\/| | | | \ \ / /|  _| | | | |
+| |  | | |_| |\ V / | |___| |_| |
+|_|  |_|\___/  \_/  |_____|____/
+```
+
+# This repository has moved to [hashicorp-labs/terraform-agentic-workflows](https://github.com/hashicorp-labs/terraform-agentic-workflows)
+
+**All future development will happen in the new location. Please update your bookmarks and remotes.**
+
+---
+
+<details>
+<summary>Legacy README (archived)</summary>
+
 # AI-Assisted Terraform Module Development (SDD)
 
 A template repository for AI-assisted Terraform module development using spec-driven development (SDD). The workflow compresses module authoring into four phases -- Understand, Design, Build+Test, and Validate -- driven by a single design document. One `design.md` replaces separate spec, plan, contract, data model, and task files, tests are written before module code, and security controls are embedded in every phase rather than bolted on as a separate review.
@@ -179,3 +202,5 @@ When adding new agents or skills:
 ## License
 
 See [LICENSE](./LICENSE) file.
+
+</details>
