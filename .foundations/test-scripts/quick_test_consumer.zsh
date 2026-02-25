@@ -44,5 +44,6 @@ done
 exec "$SCRIPT_DIR/bulk-run-demo.zsh" \
     -t 1 \
     --prompt-dir "$SCRIPT_DIR/prompts" \
+    --prompt-glob 'consumer_{asg,cloudfront,elastic}*' \
     $DRY_RUN_FLAG \
     "${EXTRA_ARGS[@]}"

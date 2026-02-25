@@ -522,7 +522,7 @@ resolve_prompt() {
             log_error "Prompt directory not found: $PROMPT_DIR"
             exit 1
         fi
-        PROMPT_DIR_FILES=( ${PROMPT_DIR}/${~PROMPT_GLOB}(N) )
+        eval "PROMPT_DIR_FILES=( ${PROMPT_DIR}/${PROMPT_GLOB}(N) )"
         if (( ${#PROMPT_DIR_FILES[@]} == 0 )); then
             log_error "No files matching '$PROMPT_GLOB' in $PROMPT_DIR"
             exit 1
