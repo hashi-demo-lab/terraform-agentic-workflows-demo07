@@ -79,6 +79,7 @@ Use `resource.ParallelTest` by default. Use `resource.Test` only when tests cann
 |-------|---------|
 | `ImportState` | `true` to enable import |
 | `ImportStateVerify` | Verify imported state matches prior state |
+| `ImportStateKind` | `resource.ImportBlockWithID` for import block generation |
 | `ResourceName` | Resource address to import |
 
 ---
@@ -218,6 +219,12 @@ Steps: []resource.TestStep{
     },
 },
 ```
+
+---
+
+## Regression Testing
+
+When fixing bugs, use two commits: first introduce a test that reproduces the issue (expect failure), then fix the underlying code. This allows independent verification of both the bug and its resolution. Link to the original bug report in the test comment.
 
 ---
 
