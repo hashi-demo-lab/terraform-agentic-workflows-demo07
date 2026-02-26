@@ -620,11 +620,7 @@ body.has-selection .node.dimmed { opacity: var(--dim); }
           <div class="node-row">
             <div class="node node-agent" data-id="tf-provider-research" data-type="agent">tf-provider-research<span class="pref">&times;3-4</span></div>
           </div>
-          <div class="node-row">
-            <div class="node node-cmd" data-id="web-search" data-type="cmd">WebSearch</div>
-            <div class="node node-cmd" data-id="web-fetch" data-type="cmd">WebFetch</div>
-          </div>
-          <div class="step-note">3-4 concurrent agents. Uses WebSearch/WebFetch (not MCP) for cloud API docs, Plugin Framework patterns, and existing provider implementations.</div>
+          <div class="step-note">3-4 concurrent agents. Researches cloud API docs, Plugin Framework patterns, and existing provider implementations.</div>
           <div class="node-row" style="margin-top:4px">
             <div class="node node-script" data-id="post-issue" data-type="script" style="border-style:dashed">post-issue-progress.sh<span class="pref">all steps</span></div>
           </div>
@@ -650,7 +646,6 @@ body.has-selection .node.dimmed { opacity: var(--dim); }
           <div class="node-row">
             <div class="node node-agent" data-id="tf-provider-design" data-type="agent">tf-provider-design</div>
             <div class="node node-skill" data-id="provider-resources" data-type="skill">provider-resources</div>
-            <div class="node node-skill" data-id="provider-actions" data-type="skill">provider-actions</div>
           </div>
           <div class="node-row">
             <div class="node node-template" data-id="provider-design-template" data-type="template">provider-design-template.md</div>
@@ -739,31 +734,46 @@ body.has-selection .node.dimmed { opacity: var(--dim); }
 
       <div class="flow-conn"><div class="flow-conn-line"></div><div class="flow-conn-dot"></div><div class="flow-conn-line"></div></div>
 
-      <!-- Phase 3: Build -->
+      <!-- Phase 3: Build + Test -->
       <div class="phase-box" data-phase="3">
         <div class="phase-label">Phase 3</div>
-        <div class="phase-title" style="color:var(--green)">Build (Go + Plugin Framework)</div>
+        <div class="phase-title" style="color:var(--green)">Build + Test (TDD)</div>
 
         <div class="step-group">
-          <div class="step-group-title">Implementation Loop</div>
+          <div class="step-group-title">Write Tests First &mdash; Step 4</div>
+          <div class="node-row">
+            <div class="node node-agent" data-id="tf-provider-test-writer" data-type="agent">tf-provider-test-writer</div>
+            <div class="node node-skill" data-id="provider-test-patterns" data-type="skill">provider-test-patterns</div>
+          </div>
+          <div class="step-note">Reads design §2 + §5. Writes test function stubs with t.Skip("not implemented") and config functions. Must compile via go test -c.</div>
+        </div>
+
+        <div class="step-group">
+          <div class="step-group-title">Implementation Loop &mdash; Steps 5-6</div>
           <div class="node-row">
             <div class="node node-agent" data-id="tf-provider-developer" data-type="agent">tf-provider-developer<span class="pref">&times;N</span></div>
             <div class="node node-skill" data-id="provider-resources" data-type="skill">provider-resources</div>
             <div class="node node-skill" data-id="provider-actions" data-type="skill">provider-actions</div>
-          </div>
-          <div class="node-row">
-            <div class="node node-cmd" data-id="web-search" data-type="cmd">WebSearch</div>
-            <div class="node node-cmd" data-id="web-fetch" data-type="cmd">WebFetch</div>
+            <div class="node node-skill" data-id="provider-test-patterns-dev" data-type="skill">provider-test-patterns</div>
           </div>
           <div class="node-row" style="margin-top:4px">
             <div class="node node-cmd" data-id="go-build" data-type="cmd">go build</div>
-            <div class="node node-cmd" data-id="go-vet" data-type="cmd">go vet</div>
+            <div class="node node-cmd" data-id="go-test-c" data-type="cmd">go test -c</div>
           </div>
-          <div class="step-note">For each checklist item: launch tf-provider-developer. Uses WebSearch/WebFetch for API reference. Runs go build + go vet for verification. Checkpoint commit per item.</div>
+          <div class="step-note">For each checklist item in §6: launch tf-provider-developer. Runs go build + go test -c for verification. Checkpoint commit per item.</div>
+        </div>
+
+        <div class="step-group">
+          <div class="step-group-title">Final Quality Gates &mdash; Step 7</div>
+          <div class="node-row">
+            <div class="node node-cmd" data-id="go-vet" data-type="cmd">go vet ./...</div>
+          </div>
+          <div class="step-note">Final go vet across codebase. Fix rounds if needed (max 2). Verify all §6 checklist items marked [x].</div>
         </div>
 
         <div class="artifacts-label">Outputs</div>
         <div class="node-row">
+          <div class="node node-artifact" data-id="go-test-stubs" data-type="artifact">*_test.go stubs</div>
           <div class="node node-artifact" data-id="go-source" data-type="artifact">*.go source files</div>
         </div>
       </div>
@@ -776,15 +786,16 @@ body.has-selection .node.dimmed { opacity: var(--dim); }
         <div class="phase-title" style="color:var(--orange)">Validate</div>
 
         <div class="step-group">
-          <div class="step-group-title">Acceptance Testing</div>
+          <div class="step-group-title">Validation &mdash; Steps 8-10</div>
           <div class="node-row">
             <div class="node node-agent" data-id="tf-provider-validator" data-type="agent">tf-provider-validator</div>
-            <div class="node node-skill" data-id="provider-run-acc-tests" data-type="skill">provider-run-acceptance-tests</div>
+            <div class="node node-skill" data-id="provider-resources-val" data-type="skill">provider-resources</div>
+            <div class="node node-skill" data-id="provider-test-patterns-val" data-type="skill">provider-test-patterns</div>
           </div>
           <div class="node-row" style="margin-top:4px">
             <div class="node node-cmd" data-id="go-test-acc" data-type="cmd">go test -run TestAcc</div>
           </div>
-          <div class="step-note">Dedicated validator agent runs acceptance tests against real cloud APIs. Validates design compliance and auto-fixes issues.</div>
+          <div class="step-note">Design conformance, build &amp; static analysis, test compilation, code review, auto-fix. Optionally runs acceptance tests against real cloud APIs.</div>
         </div>
 
         <div class="step-group">
@@ -1109,8 +1120,9 @@ const agentIO = {
     'tf-provider-design':   { reads: [], writes: ['provider-design-md'] }
   },
   'provider-impl': {
+    'tf-provider-test-writer': { reads: ['provider-design-md'], writes: ['go-test-stubs'] },
     'tf-provider-developer': { reads: ['provider-design-md'], writes: ['go-source'] },
-    'tf-provider-validator': { reads: ['go-source','provider-design-md'], writes: ['validation-report'] }
+    'tf-provider-validator': { reads: ['go-source','go-test-stubs','provider-design-md'], writes: ['validation-report'] }
   },
   'consumer-plan': {
     'tf-consumer-research': { reads: [], writes: [] },
@@ -1182,12 +1194,9 @@ const connections = {
     'gh-issue-create': ['gh-issue','issue-body-template'],
     'issue-body-template': ['gh-issue-create'],
     'tf-domain-category': ['tf-provider-research'],
-    'tf-provider-research': ['web-search','web-fetch','tf-provider-design'],
-    'web-search': ['tf-provider-research'],
-    'web-fetch': ['tf-provider-research'],
-    'tf-provider-design': ['provider-resources','provider-actions','provider-design-template','provider-constitution','provider-design-md','tf-provider-research'],
+    'tf-provider-research': ['tf-provider-design'],
+    'tf-provider-design': ['provider-resources','provider-design-template','provider-constitution','provider-design-md','tf-provider-research'],
     'provider-resources': ['tf-provider-design'],
-    'provider-actions': ['tf-provider-design'],
     'provider-design-template': ['tf-provider-design'],
     'provider-constitution': ['tf-provider-design'],
     'gh-issue': ['gh-issue-create','post-issue'],
@@ -1197,17 +1206,21 @@ const connections = {
     'validate-env': [],
     'post-issue': ['gh-issue-updated'],
     'checkpoint-commit': [],
-    'provider-design-md': ['tf-provider-developer','tf-provider-validator'],
-    'tf-provider-developer': ['provider-resources','provider-actions','web-search','web-fetch','provider-design-md','go-source'],
-    'provider-resources': ['tf-provider-developer'],
+    'provider-design-md': ['tf-provider-test-writer','tf-provider-developer','tf-provider-validator'],
+    'tf-provider-test-writer': ['provider-test-patterns','provider-design-md','go-test-stubs'],
+    'provider-test-patterns': ['tf-provider-test-writer','tf-provider-developer','tf-provider-validator'],
+    'tf-provider-developer': ['provider-resources','provider-actions','provider-test-patterns-dev','provider-design-md','go-source'],
+    'provider-resources': ['tf-provider-developer','tf-provider-validator'],
     'provider-actions': ['tf-provider-developer'],
-    'web-search': ['tf-provider-developer'],
-    'web-fetch': ['tf-provider-developer'],
+    'provider-test-patterns-dev': ['tf-provider-developer'],
+    'provider-resources-val': ['tf-provider-validator'],
+    'provider-test-patterns-val': ['tf-provider-validator'],
     'go-build': ['go-source'],
+    'go-test-c': ['go-source','go-test-stubs'],
     'go-vet': ['go-source'],
-    'go-source': ['tf-provider-developer','go-build','go-vet','tf-provider-validator','go-test-acc'],
-    'tf-provider-validator': ['provider-run-acc-tests','go-source','provider-design-md','validation-report'],
-    'provider-run-acc-tests': ['tf-provider-validator'],
+    'go-test-stubs': ['tf-provider-test-writer','go-test-c','tf-provider-validator'],
+    'go-source': ['tf-provider-developer','go-build','go-test-c','go-vet','tf-provider-validator','go-test-acc'],
+    'tf-provider-validator': ['provider-resources-val','provider-test-patterns-val','go-source','go-test-stubs','provider-design-md','validation-report'],
     'go-test-acc': ['go-source'],
     'tf-report-template': ['validation-report'],
     'gh-pr-create': ['pr','gh-issue-updated'],
@@ -1343,26 +1356,30 @@ const nodeDesc = {
   'tf-docs':                'terraform-docs markdown . > README.md in Phase 4.',
 
   /* Provider agents */
-  'tf-provider-research':   'Investigates ONE research question per instance via WebSearch/WebFetch. Researches cloud service APIs, Plugin Framework patterns, and existing provider implementations. Runs 3-4 concurrently.',
-  'tf-provider-design':     'Produces provider-design-{resource}.md from requirements and research. Covers schema design, CRUD operations, state management, and acceptance test scenarios.',
-  'tf-provider-developer':  'Executes one implementation checklist item using Go + Plugin Framework. Reads schema and CRUD specs from design. Writes Go source, runs go build + go vet. Uses WebSearch/WebFetch for API reference.',
-  'tf-provider-validator':  'Validates provider code against design, runs acceptance tests, performs code review, and auto-fixes issues. Dedicated Phase 4 agent.',
+  'tf-provider-research':   'Investigates ONE research question per instance. Researches cloud service APIs, Plugin Framework patterns, and existing provider implementations. Runs 3-4 concurrently.',
+  'tf-provider-design':     'Produces provider-design-{resource}.md from requirements and research. Covers schema design, CRUD operations, state management, and acceptance test scenarios. Skills: provider-resources.',
+  'tf-provider-test-writer':'Reads design \u00a72 + \u00a75. Writes Go acceptance test stubs with t.Skip("not implemented") and config functions. Must compile via go test -c. Tests only \u2014 no helpers, exports, or sweep. Skills: provider-test-patterns.',
+  'tf-provider-developer':  'Executes one implementation checklist item using Go + Plugin Framework. Reads schema and CRUD specs from design. Writes Go source, runs go build + go test -c. Skills: provider-resources, provider-actions, provider-test-patterns.',
+  'tf-provider-validator':  'Validates provider code against design: conformance check, build \u0026 static analysis, test compilation, code review, auto-fix. Optionally runs acceptance tests. Skills: provider-resources, provider-test-patterns.',
 
   /* Provider skills & references */
-  'provider-resources':     'Plugin Framework resource/data-source patterns: schema design, CRUD operations, state management, acceptance testing. Used by design and developer agents.',
+  'provider-resources':     'Plugin Framework resource/data-source patterns: schema design, CRUD operations, state management, acceptance testing. Used by design, developer, and validator agents.',
+  'provider-resources-val': 'Plugin Framework resource/data-source patterns: schema design, CRUD operations, state management, acceptance testing. Used by design, developer, and validator agents.',
   'provider-actions':       'Plugin Framework action patterns: imperative operations at lifecycle events (before/after create, update, destroy).',
-  'provider-run-acc-tests': 'Guide for running acceptance tests: go test -run TestAcc, environment setup, real cloud API interaction.',
+  'provider-test-patterns': 'Terraform provider acceptance test patterns: TestCase/TestStep fields, scenario patterns (basic, disappears, update, validation), config helpers, import, sweepers.',
+  'provider-test-patterns-dev':'Terraform provider acceptance test patterns: TestCase/TestStep fields, scenario patterns, config helpers, import, sweepers. Used by developer agent.',
+  'provider-test-patterns-val':'Terraform provider acceptance test patterns: TestCase/TestStep fields, scenario patterns, config helpers, import, sweepers. Used by validator agent.',
   'provider-design-template':'Canonical template for provider-design-{resource}.md. Covers schema, CRUD, state mapping, tests, and checklist.',
   'provider-constitution':  'Provider code standards: Go conventions, Plugin Framework patterns, testing requirements. Read by tf-provider-design directly.',
   'provider-design-md':     'Provider design artifact. Covers schema design, CRUD operations, state management, test scenarios, and implementation checklist. Handoff between /tf-provider-plan and /tf-provider-implement.',
 
-  /* Provider tools & commands */
-  'web-search':             'WebSearch tool: searches the web for cloud API documentation, Plugin Framework patterns, and Go library references. Used by provider agents instead of MCP.',
-  'web-fetch':              'WebFetch tool: fetches and processes web pages for API specs, SDK docs, and implementation examples. Used alongside WebSearch.',
+  /* Provider commands & artifacts */
   'go-build':               'go build ./... \u2014 compiles Go source to verify syntax and type correctness.',
+  'go-test-c':              'go test -c -o /dev/null ./internal/service/<service> \u2014 verifies test compilation without running. Reports skip count vs implemented count.',
   'go-vet':                 'go vet ./... \u2014 reports suspicious constructs and potential bugs in Go code.',
   'go-test-acc':            'go test -run TestAcc ./... \u2014 runs acceptance tests against real cloud APIs. Requires valid credentials.',
-  'go-source':              'Go provider source files: resource definitions, data sources, models, and acceptance tests.',
+  'go-source':              'Go provider source files: resource definitions, data sources, models, and test helpers.',
+  'go-test-stubs':          'Go acceptance test stubs written by tf-provider-test-writer. All use t.Skip("not implemented") and compile via go test -c.',
 
   /* Consumer agents */
   'tf-consumer-research':   'Investigates ONE question per instance. Searches private registry modules via terraform-mcp, investigates module interfaces, wiring patterns, and composition best practices.',
