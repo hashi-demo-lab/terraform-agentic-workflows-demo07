@@ -1,9 +1,6 @@
 ---
 name: tf-judge-criteria
-description: >
-  Scoring rubrics, severity classification, evaluation methodology, and
-  iterative refinement protocol for Terraform code quality assessment.
-  Used by validator agents across all workflows.
+description: Scoring rubrics, severity classification, evaluation methodology, and iterative refinement protocol for Terraform code quality assessment.
 ---
 
 # Terraform Code Quality Evaluation Criteria
@@ -17,54 +14,54 @@ description: >
 
 ## Production Readiness Scale
 
-| Score | Level | Action |
-|-------|-------|--------|
-| 9.0-10.0 | Exceptional | None — use as reference |
-| 8.0-8.9 | Excellent | Optional refinement |
-| 7.0-7.9 | Good | Address high-priority issues |
-| 6.0-6.9 | Adequate | Fix critical issues before production |
-| 5.0-5.9 | Below Standard | Rework required |
-| 4.0-4.9 | Poor | Substantial redesign needed |
-| 1.0-3.9 | Unacceptable | Complete rework required |
+| Score    | Level          | Action                                |
+| -------- | -------------- | ------------------------------------- |
+| 9.0-10.0 | Exceptional    | None — use as reference               |
+| 8.0-8.9  | Excellent      | Optional refinement                   |
+| 7.0-7.9  | Good           | Address high-priority issues          |
+| 6.0-6.9  | Adequate       | Fix critical issues before production |
+| 5.0-5.9  | Below Standard | Rework required                       |
+| 4.0-4.9  | Poor           | Substantial redesign needed           |
+| 1.0-3.9  | Unacceptable   | Complete rework required              |
 
 ## 6 Evaluation Dimensions
 
 ### Module Workflow (creating reusable modules)
 
-| # | Dimension | Weight | Key Criteria |
-|---|-----------|--------|-------------|
-| 1 | Resource Design | 25% | Raw resources with secure defaults, conditional creation, proper dependencies |
-| 2 | Security & Compliance | 30% | Encryption, IAM least privilege, no credentials, audit logs. **<5.0 = Not Production Ready** |
-| 3 | Code Quality | 15% | `terraform fmt`, naming conventions, validation, DRY, file organization |
-| 4 | Variables & Outputs | 10% | Type constraints, validation rules, secure defaults, descriptions |
-| 5 | Testing | 10% | `.tftest.hcl` coverage, mock providers, scenario groups, assertion quality |
-| 6 | Constitution Alignment | 10% | Matches design.md, constitution MUST compliance |
+| #   | Dimension              | Weight | Key Criteria                                                                                 |
+| --- | ---------------------- | ------ | -------------------------------------------------------------------------------------------- |
+| 1   | Resource Design        | 25%    | Raw resources with secure defaults, conditional creation, proper dependencies                |
+| 2   | Security & Compliance  | 30%    | Encryption, IAM least privilege, no credentials, audit logs. **<5.0 = Not Production Ready** |
+| 3   | Code Quality           | 15%    | `terraform fmt`, naming conventions, validation, DRY, file organization                      |
+| 4   | Variables & Outputs    | 10%    | Type constraints, validation rules, secure defaults, descriptions                            |
+| 5   | Testing                | 10%    | `.tftest.hcl` coverage, mock providers, scenario groups, assertion quality                   |
+| 6   | Constitution Alignment | 10%    | Matches design.md, constitution MUST compliance                                              |
 
 **Module score formula**: `(D1 x 0.25) + (D2 x 0.30) + (D3 x 0.15) + (D4 x 0.10) + (D5 x 0.10) + (D6 x 0.10)`
 
 ### Consumer Workflow (composing from registry modules)
 
-| # | Dimension | Weight | Key Criteria |
-|---|-----------|--------|-------------|
-| 1 | Module Usage | 25% | Private registry modules, semantic versioning, minimal raw resources (glue only) |
-| 2 | Security & Compliance | 30% | Module secure defaults honoured, no credentials, dynamic auth, audit logs. **<5.0 = Not Production Ready** |
-| 3 | Code Quality | 15% | `terraform fmt`, naming, wiring clarity, file organization |
-| 4 | Variables & Outputs | 10% | Type constraints, validation rules, defaults, descriptions |
-| 5 | Wiring & Integration | 10% | Module output-to-input connections, type compatibility, no circular deps |
-| 6 | Constitution Alignment | 10% | Matches consumer-design.md, constitution MUST compliance |
+| #   | Dimension              | Weight | Key Criteria                                                                                               |
+| --- | ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------- |
+| 1   | Module Usage           | 25%    | Private registry modules, semantic versioning, minimal raw resources (glue only)                           |
+| 2   | Security & Compliance  | 30%    | Module secure defaults honoured, no credentials, dynamic auth, audit logs. **<5.0 = Not Production Ready** |
+| 3   | Code Quality           | 15%    | `terraform fmt`, naming, wiring clarity, file organization                                                 |
+| 4   | Variables & Outputs    | 10%    | Type constraints, validation rules, defaults, descriptions                                                 |
+| 5   | Wiring & Integration   | 10%    | Module output-to-input connections, type compatibility, no circular deps                                   |
+| 6   | Constitution Alignment | 10%    | Matches consumer-design.md, constitution MUST compliance                                                   |
 
 **Consumer score formula**: `(D1 x 0.25) + (D2 x 0.30) + (D3 x 0.15) + (D4 x 0.10) + (D5 x 0.10) + (D6 x 0.10)`
 
 ### Provider Workflow (implementing provider resources)
 
-| # | Dimension | Weight | Key Criteria |
-|---|-----------|--------|-------------|
-| 1 | Schema Design | 25% | Typed attributes, validators, plan modifiers, computed fields |
-| 2 | Security & Compliance | 30% | Sensitive marking, no secrets in errors/logs, credential handling. **<5.0 = Not Production Ready** |
-| 3 | Code Quality | 15% | Go conventions, error handling, Plugin Framework patterns |
-| 4 | CRUD Operations | 10% | Create, Read, Update, Delete, Import implemented correctly |
-| 5 | Testing | 10% | Acceptance test coverage, scenario groups, check functions |
-| 6 | Constitution Alignment | 10% | Matches provider-design.md, constitution MUST compliance |
+| #   | Dimension              | Weight | Key Criteria                                                                                       |
+| --- | ---------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| 1   | Schema Design          | 25%    | Typed attributes, validators, plan modifiers, computed fields                                      |
+| 2   | Security & Compliance  | 30%    | Sensitive marking, no secrets in errors/logs, credential handling. **<5.0 = Not Production Ready** |
+| 3   | Code Quality           | 15%    | Go conventions, error handling, Plugin Framework patterns                                          |
+| 4   | CRUD Operations        | 10%    | Create, Read, Update, Delete, Import implemented correctly                                         |
+| 5   | Testing                | 10%    | Acceptance test coverage, scenario groups, check functions                                         |
+| 6   | Constitution Alignment | 10%    | Matches provider-design.md, constitution MUST compliance                                           |
 
 **Provider score formula**: `(D1 x 0.25) + (D2 x 0.30) + (D3 x 0.15) + (D4 x 0.10) + (D5 x 0.10) + (D6 x 0.10)`
 
@@ -113,11 +110,11 @@ description: >
 
 ### Overall: {X.X}/10.0 — {Level}
 
-| # | Dimension | Score | Issues |
-|---|-----------|-------|--------|
-| 1 | {name} | {X.X} | {count} P0, {count} P1, {count} P2 |
-| 2 | Security & Compliance | {X.X} | {count} P0, {count} P1, {count} P2 |
-| ... | ... | ... | ... |
+| #   | Dimension             | Score | Issues                             |
+| --- | --------------------- | ----- | ---------------------------------- |
+| 1   | {name}                | {X.X} | {count} P0, {count} P1, {count} P2 |
+| 2   | Security & Compliance | {X.X} | {count} P0, {count} P1, {count} P2 |
+| ... | ...                   | ...   | ...                                |
 
 ### Production Readiness: {Ready / Not Ready}
 
@@ -125,8 +122,8 @@ description: >
 
 ### Top Issues
 
-| # | Severity | Dimension | File:Line | Issue | Remediation |
-|---|----------|-----------|-----------|-------|-------------|
-| 1 | {P0-P3} | {dim} | {file:line} | {description} | {fix} |
-| ... | ... | ... | ... | ... | ... |
+| #   | Severity | Dimension | File:Line   | Issue         | Remediation |
+| --- | -------- | --------- | ----------- | ------------- | ----------- |
+| 1   | {P0-P3}  | {dim}     | {file:line} | {description} | {fix}       |
+| ... | ...      | ...       | ...         | ...           | ...         |
 ```
