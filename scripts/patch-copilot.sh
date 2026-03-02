@@ -1,16 +1,53 @@
 #!/usr/bin/env bash
 # patch-copilot.sh — Neuter undici assert() calls in the GitHub Copilot CLI
-# bundle that cause AssertionError crashes on Node.js v25+.
+# bundle that cause AssertionError crashes during long-lived sessions.
 #
-# The bundled undici imports Node's assert module and sprinkles invariant
-# checks throughout the connection pool / HTTP client code.  On Node v25 the
-# built-in undici changed internal state semantics, causing these assertions
-# to fire on long-lived sessions (see github/copilot-cli#1754).
+# ROOT CAUSE
+# ----------
+# The bundled undici HTTP client has race conditions in its HTTP/2 connection
+# pool and dispatch loop that cause state invariant violations:
 #
-# Strategy: find every `var NAME=require("assert")` (or `require("node:assert")`)
-# that lives inside an undici module and replace it with a no-op function.
-# This is safe because these are debug invariants, not control flow, and
-# Node's own undici ships without them.
+#   - client.js _resume():  assert(client[kPending] === 0)  fires when a
+#     client is destroyed while requests are still queued (GOAWAY / timeout).
+#   - client-h1.js onHttpSocketClose():  assert(client[kRunning] === 0)
+#     fires when socket closes before running requests are drained.
+#   - client-h2.js:  assert(!this.completed)  fires when late DATA frames
+#     arrive after request completion (nodejs/undici#4843).
+#   - Pool/Agent dispatchers:  assert(this.callback)  fires when error-rate
+#     spikes cause connection churn (nodejs/undici#4059).
+#
+# These are known upstream bugs (nodejs/undici#4059, #4843, #4846, #3011).
+# Active fix PRs exist (e.g. nodejs/undici#4845) but the Copilot CLI bundles
+# an older undici snapshot that predates them.
+#
+# The assertions are debug invariants, NOT control flow — undici's own
+# production builds strip them.  When they fire, the process crashes instead
+# of allowing the existing error-recovery paths (retry, reconnect) to run.
+#
+# STRATEGY
+# --------
+# Find every  require("assert") / require("node:assert")  import that lives
+# inside an undici module (identified by proximity to undici-specific symbols)
+# and replace it with a self-referencing Proxy no-op:
+#
+#   (()=>{let a=new Proxy(()=>{},{get:()=>a});return a})()
+#
+# This is callable (assert(expr) → no-op), supports property access
+# (assert.strictEqual(a,b) → no-op), and is infinitely chainable
+# (assert.strict.ok(expr) → no-op).  Non-undici assert imports (fetch-spec,
+# crypto, cache API, tree-sitter, etc.) are left intact.
+#
+# SCOPE
+# -----
+# Patches ~25 undici assert imports per bundle (index.js, sdk/index.js).
+# Remaining ~32 non-undici imports per bundle are untouched.
+# Includes backup, idempotency check, and node --check syntax validation.
+#
+# REMOVAL
+# -------
+# Remove this patch when the Copilot CLI ships an undici version containing
+# the fixes from nodejs/undici#4845 and related PRs, or when the bundled
+# undici drops assert() calls in its production build.
 #
 # Usage:
 #   ./scripts/patch-copilot.sh            # auto-detect install path
