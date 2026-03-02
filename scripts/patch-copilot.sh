@@ -108,24 +108,27 @@ UNDICI_KEYWORDS = [
     'kUrl', 'kClose', 'kDestroy', 'kDispatch', 'kNeedDrain',
     'kKeepAliveTimeout', 'kSocket', 'kClient', 'kHeadersList',
     'kDestroyed', 'kBodyUsed',
+    'RequestAbortedError', 'NotSupportedError', 'InvalidArgumentError',
+    'SocketError', 'kRetryHandlerDefaultRetry',
+    'addSignal', 'removeSignal',
 ]
 
-# Match:  var NAME=REQFN("assert")  or  var NAME=REQFN("node:assert")
+# Match every  REQFN("assert")  /  REQFN("node:assert")  occurrence.
+# These appear as  var NAME=REQFN(...)  or  ,NAME=REQFN(...)  in var chains.
 pattern = re.compile(
-    r'var (\w+)=' + re.escape(req_fn) + r'\("(?:node:)?assert"\)'
+    re.escape(req_fn) + r'\("(?:node:)?assert"\)'
 )
 
+# No-op replacement: a callable Proxy whose property access returns itself,
+# so both  assert(expr)  and  assert.strictEqual(a,b)  become no-ops.
+NOOP = '(()=>{let a=new Proxy(()=>{},{get:()=>a});return a})()'
+
 total = 0
-# Process from end to start so offsets stay valid
 for m in reversed(list(pattern.finditer(content))):
-    name = m.group(1)
     pos = m.start()
     ctx = content[pos:pos+2000]
     if any(kw in ctx for kw in UNDICI_KEYWORDS):
-        # Replace:  var NAME=require("assert")
-        # With:     var NAME=()=>{}             (no-op function, same var binding)
-        replacement = f'var {name}=()=>{{}}'
-        content = content[:m.start()] + replacement + content[m.end():]
+        content = content[:m.start()] + NOOP + content[m.end():]
         total += 1
 
 with open(path, 'w') as f:
