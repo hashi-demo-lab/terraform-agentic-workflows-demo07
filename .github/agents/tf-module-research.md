@@ -1,8 +1,6 @@
 ---
 name: tf-module-research
-description: Investigate cloud service provider resources via docs, Terraform
-  provider docs, and registry patterns. Each instance answers ONE research
-  question. Use during planning phase to resolve resource beh...
+description: Investigate cloud service provider resources via docs, Terraform provider docs, and registry patterns. Each instance answers ONE research question. Use during planning phase to resolve resource behavior and design decisions.
 tools:
   - read
   - shell

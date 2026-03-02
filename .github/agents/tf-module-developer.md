@@ -1,8 +1,6 @@
 ---
 name: tf-module-developer
-description: Terraform module developer. Execute individual implementation
-  checklist items from design.md with Terraform module code. Item context from
-  specs/{FEATURE}/design.md.
+description: Terraform module developer. Execute individual implementation checklist items from design.md with Terraform module code. Item context from specs/{FEATURE}/design.md.
 tools:
   - read
   - edit

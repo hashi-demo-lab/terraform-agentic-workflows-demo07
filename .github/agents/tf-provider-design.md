@@ -1,8 +1,6 @@
 ---
 name: tf-provider-design
-description: Terraform provider resource design. Produce a single
-  provider-design-{resource}.md from clarified requirements and research
-  findings. Covers purpose & requirements, schema design, CRUD operations, ...
+description: Terraform provider resource design. Produce a single provider-design-{resource}.md from clarified requirements and research findings. Covers purpose & requirements, schema design, CRUD operations, state management, testing strategy, and implementation checklist.
 tools:
   - read
   - edit
