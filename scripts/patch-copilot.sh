@@ -52,8 +52,15 @@
 # Usage:
 #   ./scripts/patch-copilot.sh            # auto-detect install path
 #   ./scripts/patch-copilot.sh /path/to/@github/copilot
+#   ./scripts/patch-copilot.sh --force     # re-patch even if already patched
 
 set -euo pipefail
+
+FORCE=false
+if [[ "${1:-}" == "--force" || "${1:-}" == "-f" ]]; then
+  FORCE=true
+  shift
+fi
 
 # ── Locate the copilot package ────────────────────────────────────────────────
 find_package_dir() {
@@ -104,8 +111,18 @@ patch_bundle() {
   fi
 
   if grep -q '__UNDICI_ASSERT_PATCH__' "$file" 2>/dev/null; then
-    echo "  ✅  $label — already patched"
-    return 0
+    if [[ "$FORCE" != true ]]; then
+      echo "  ✅  $label — already patched (use --force to re-apply)"
+      return 0
+    fi
+    echo "  🔄  $label — force re-patching from backup"
+    local backup="${file}.bak"
+    if [[ -f "$backup" ]]; then
+      cp "$backup" "$file"
+    else
+      echo "  ❌  $label — no backup found, cannot force re-patch" >&2
+      return 1
+    fi
   fi
 
   # Backup
