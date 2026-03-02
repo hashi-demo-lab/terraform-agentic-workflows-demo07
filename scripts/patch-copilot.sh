@@ -26,10 +26,15 @@
 #
 # STRATEGY
 # --------
-# Find every  require("assert") / require("node:assert")  import that lives
-# inside an undici module (identified by proximity to undici-specific symbols)
-# and replace it with a self-referencing Proxy no-op:
+# 1. ASSERT NEUTERING: Replace undici require("assert") imports with a
+#    self-referencing Proxy no-op so assertions become silent no-ops.
 #
+# 2. UPSTREAM H2 FIXES (nodejs/undici#4845): Apply the actual code fixes
+#    from the upstream PR to the minified bundle:
+#    a) Guard H2 data handler — early return if request.aborted/completed
+#    b) Remove data listeners before onComplete in trailers handler
+#
+# The Proxy no-op pattern:
 #   (()=>{let a=new Proxy(()=>{},{get:()=>a});return a})()
 #
 # This is callable (assert(expr) → no-op), supports property access
@@ -185,9 +190,54 @@ for m in reversed(list(pattern.finditer(content))):
         content = content[:m.start()] + NOOP + content[m.end():]
         total += 1
 
+# ── Upstream fix: nodejs/undici#4845 ─────────────────────────────────────
+# Fix 1: Guard H2 data handler — skip late DATA frames after completion.
+#   Before:  STREAM.on("data",CHUNK=>{REQUEST.onData(CHUNK)===!1&&STREAM.pause()})
+#   After:   STREAM.on("data",CHUNK=>{if(REQUEST.aborted||REQUEST.completed)return;REQUEST.onData(CHUNK)===!1&&STREAM.pause()})
+h2_data = re.compile(
+    r'(?P<stream>[a-zA-Z]+)\.on\("data",(?P<chunk>[a-zA-Z]+)=>\{'
+    r'(?P<req>[a-zA-Z]+)\.onData\((?P=chunk)\)===!1&&(?P=stream)\.pause\(\)'
+    r'\}'
+)
+h2_data_fixes = 0
+for m in reversed(list(h2_data.finditer(content))):
+    s, c, r = m.group('stream'), m.group('chunk'), m.group('req')
+    replacement = (
+        f'{s}.on("data",{c}=>{{if({r}.aborted||{r}.completed)return;'
+        f'{r}.onData({c})===!1&&{s}.pause()}})'
+    )
+    # Only patch H2 client contexts (near HTTP/2-specific patterns)
+    ctx = content[max(0,m.start()-800):m.start()+800]
+    if 'onComplete' in ctx and ('trailers' in ctx or 'openStreams' in ctx
+            or '.request(' in ctx or 'onHeaders' in ctx):
+        content = content[:m.start()] + replacement + content[m.end()+1:]
+        h2_data_fixes += 1
+total += h2_data_fixes
+
+# Fix 2: Remove data listeners before onComplete in trailers handler.
+#   Before:  STREAM.once("trailers",VAR=>{REQUEST.aborted||REQUEST.completed||REQUEST.onComplete(VAR)})
+#   After:   STREAM.once("trailers",VAR=>{REQUEST.aborted||REQUEST.completed||(STREAM.removeAllListeners("data"),REQUEST.onComplete(VAR))})
+h2_trailers = re.compile(
+    r'(?P<stream>[a-zA-Z]+)\.once\("trailers",(?P<var>[a-zA-Z]+)=>\{'
+    r'(?P<req>[a-zA-Z]+)\.aborted\|\|(?P=req)\.completed\|\|'
+    r'(?P=req)\.onComplete\((?P=var)\)'
+    r'\}'
+)
+h2_trailer_fixes = 0
+for m in reversed(list(h2_trailers.finditer(content))):
+    s, v, r = m.group('stream'), m.group('var'), m.group('req')
+    replacement = (
+        f'{s}.once("trailers",{v}=>{{{r}.aborted||{r}.completed||'
+        f'({s}.removeAllListeners("data"),{r}.onComplete({v}))}})'
+    )
+    content = content[:m.start()] + replacement + content[m.end()+1:]
+    h2_trailer_fixes += 1
+total += h2_trailer_fixes
+
 with open(path, 'w') as f:
     f.write(content)
-print(total)
+print(f'{total}')
+sys.stderr.write(f'  🔧  H2 data guards: {h2_data_fixes}, trailers fixes: {h2_trailer_fixes}\n')
 PYEOF
 )
 
