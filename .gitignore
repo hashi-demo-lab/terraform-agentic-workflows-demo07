@@ -47,3 +47,5 @@ notes-during-refactoring/
 
 # OS files
 .DS_Store
+.copilot/config.json
+.copilot/logs/*
