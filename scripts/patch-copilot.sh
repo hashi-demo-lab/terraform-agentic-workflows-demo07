@@ -9,102 +9,172 @@
 set -euo pipefail
 
 # ── Locate the copilot package ────────────────────────────────────────────────
+find_package_dir() {
+  # 1. npm global root (most reliable — avoids picking up VS Code shims)
+  local npm_root
+  npm_root="$(npm root -g 2>/dev/null || true)"
+  if [[ -f "$npm_root/@github/copilot/index.js" ]]; then
+    echo "$npm_root/@github/copilot"
+    return
+  fi
+
+  # 2. Walk every 'copilot' on PATH looking for one whose resolved target
+  #    sits next to an index.js (i.e. the npm-loader symlink pattern).
+  while IFS= read -r bin; do
+    local resolved dir
+    resolved="$(readlink -f "$bin" 2>/dev/null || true)"
+    dir="$(dirname "$resolved")"
+    if [[ -f "$dir/index.js" ]]; then
+      echo "$dir"
+      return
+    fi
+  done < <(command -v -a copilot 2>/dev/null || true)
+}
+
 if [[ $# -ge 1 ]]; then
   COPILOT_DIR="$1"
 else
-  COPILOT_BIN="$(command -v copilot 2>/dev/null || true)"
-  if [[ -z "$COPILOT_BIN" ]]; then
-    echo "❌  'copilot' not found in PATH. Pass the package directory explicitly." >&2
+  COPILOT_DIR="$(find_package_dir)"
+  if [[ -z "$COPILOT_DIR" ]]; then
+    echo "❌  Could not locate the @github/copilot npm package." >&2
+    echo "    Pass the package directory explicitly: $0 /path/to/@github/copilot" >&2
     exit 1
   fi
-  # Resolve symlink: .../bin/copilot -> .../lib/node_modules/@github/copilot/npm-loader.js
-  COPILOT_DIR="$(dirname "$(readlink -f "$COPILOT_BIN")")"
 fi
 
-INDEX="$COPILOT_DIR/index.js"
-
-if [[ ! -f "$INDEX" ]]; then
-  echo "❌  index.js not found at: $INDEX" >&2
+if [[ ! -d "$COPILOT_DIR" ]]; then
+  echo "❌  Directory not found: $COPILOT_DIR" >&2
   exit 1
 fi
 
-echo "📦  Copilot bundle: $INDEX"
+echo "📦  Copilot package: $COPILOT_DIR"
 
-# ── Already patched? ─────────────────────────────────────────────────────────
-if grep -q '__PATCH_APPLIED__' "$INDEX" 2>/dev/null; then
-  echo "✅  Patch already applied — nothing to do."
-  exit 0
-fi
+# ── Patch a single JS bundle file ────────────────────────────────────────────
+# Usage: patch_bundle <path>
+# Returns 0 if patched or already clean, 1 on failure.
+patch_bundle() {
+  local file="$1"
+  local label
+  label="$(basename "$(dirname "$file")")/$(basename "$file")"
 
-# ── Check that the known assertion patterns are present ──────────────────────
-H1_NEEDLE='function Hdo(t,e){for(;;){if(t.destroyed){OJ(t[HNe]===0);return}'
-H2_NEEDLE='function EWo(t,e){for(;;){if(t.destroyed){vs(t[qq]===0);return}'
+  if [[ ! -f "$file" ]]; then
+    return 0   # optional file, skip silently
+  fi
 
-H1_FOUND=false
-H2_FOUND=false
-grep -qF "$H1_NEEDLE" "$INDEX" && H1_FOUND=true
-grep -qF "$H2_NEEDLE" "$INDEX" && H2_FOUND=true
+  # Idempotency marker
+  if grep -q '__PATCH_APPLIED__' "$file" 2>/dev/null; then
+    echo "  ✅  $label — already patched"
+    return 0
+  fi
 
-if ! $H1_FOUND && ! $H2_FOUND; then
-  echo "⚠️   Neither assertion pattern found — the bundle may already be fixed or uses different variable names."
-  echo "    No changes made."
-  exit 0
-fi
+  # Count matching patterns (all known assertion forms in undici client/pool)
+  local count
+  count=$(python3 -c "
+import re
+with open('$file', 'r') as f:
+    content = f.read()
+patterns = [
+    re.compile(r'for\(;;\)\{if\(t\.destroyed\)\{\w+\(t\[\w+\]===0\);return\}'),
+    re.compile(r't\.destroyed\)\{\w+\(t\[\w+\]===0\);let '),
+    re.compile(r'\}\w+\(t\[\w+\]===0\)\}\}function'),
+    re.compile(r'for\(\w+\(t\[\w+\]===0\);'),
+    re.compile(r',\w+\(t\[\w+\]===0\),t\.emit\(\"disconnect\"'),
+]
+print(sum(len(p.findall(content)) for p in patterns))
+")
 
-# ── Backup ────────────────────────────────────────────────────────────────────
-BACKUP="${INDEX}.bak"
-if [[ ! -f "$BACKUP" ]]; then
-  cp "$INDEX" "$BACKUP"
-  echo "💾  Backup saved: $BACKUP"
-else
-  echo "💾  Backup already exists: $BACKUP"
-fi
+  if [[ "$count" -eq 0 ]]; then
+    echo "  ⚠️   $label — no assertion patterns found (already clean or different build)"
+    return 0
+  fi
 
-# ── Apply patches ─────────────────────────────────────────────────────────────
-TMP="$(mktemp)"
-cp "$INDEX" "$TMP"
+  echo "  🔍  $label — found $count assertion(s)"
 
-if $H1_FOUND; then
-  sed -i 's|function Hdo(t,e){for(;;){if(t\.destroyed){OJ(t\[HNe\]===0);return}|function Hdo(t,e){for(;;){if(t.destroyed){return}|g' "$TMP"
-  echo "🔧  Patched H1 dispatcher (Hdo): removed OJ(t[HNe]===0) assertion"
-fi
+  # Backup
+  local backup="${file}.bak"
+  if [[ ! -f "$backup" ]]; then
+    cp "$file" "$backup"
+    echo "  💾  Backup: $backup"
+  fi
 
-if $H2_FOUND; then
-  sed -i 's|function EWo(t,e){for(;;){if(t\.destroyed){vs(t\[qq\]===0);return}|function EWo(t,e){for(;;){if(t.destroyed){return}|g' "$TMP"
-  echo "🔧  Patched H2 dispatcher (EWo): removed vs(t[qq]===0) assertion"
-fi
+  # Apply patch via Python (robust to any minified variable names)
+  local tmp patched
+  tmp="$(mktemp --suffix=.js)"
+  cp "$file" "$tmp"
 
-# Stamp so re-runs are idempotent
-echo "" >> "$TMP"
-echo "// __PATCH_APPLIED__" >> "$TMP"
+  patched=$(python3 - "$tmp" <<'PYEOF'
+import re, sys
+path = sys.argv[1]
+with open(path, 'r') as f:
+    content = f.read()
+patches = [
+    # for(;;){if(t.destroyed){FUNC(t[x]===0);return}
+    (re.compile(r'(for\(;;\)\{if\(t\.destroyed\)\{)\w+\(t\[\w+\]===0\);(return\})'), r'\1\2'),
+    # if(...,t.destroyed){FUNC(t[x]===0);let   — destroy path before splice
+    (re.compile(r'(t\.destroyed\)\{)\w+\(t\[\w+\]===0\);(let )'), r'\1\2'),
+    # }FUNC(t[x]===0)}}function  — end of error-flush loop
+    (re.compile(r'(\})\w+\(t\[\w+\]===0\)(\}\}function)'), r'\1\2'),
+    # for(FUNC(t[x]===0);  — TLS cert-altname error loop initialiser
+    (re.compile(r'for\(\w+\(t\[\w+\]===0\);'), r'for(;'),
+    # ,FUNC(t[x]===0),t.emit("disconnect"  — disconnect handler
+    (re.compile(r',\w+\(t\[\w+\]===0\)(,t\.emit\("disconnect")'), r'\1'),
+]
+total = 0
+for pattern, repl in patches:
+    content, n = pattern.subn(repl, content)
+    total += n
+with open(path, 'w') as f:
+    f.write(content)
+print(total)
+PYEOF
+)
 
-mv "$TMP" "$INDEX"
+  echo "" >> "$tmp"
+  echo "// __PATCH_APPLIED__" >> "$tmp"
 
-# ── Verify ────────────────────────────────────────────────────────────────────
-echo ""
-echo "🔍  Verifying patch..."
+  # Verify
+  local remaining
+  remaining=$(python3 -c "
+import re
+with open('$tmp', 'r') as f:
+    content = f.read()
+patterns = [
+    re.compile(r'for\(;;\)\{if\(t\.destroyed\)\{\w+\(t\[\w+\]===0\);return\}'),
+    re.compile(r't\.destroyed\)\{\w+\(t\[\w+\]===0\);let '),
+    re.compile(r'\}\w+\(t\[\w+\]===0\)\}\}function'),
+    re.compile(r'for\(\w+\(t\[\w+\]===0\);'),
+    re.compile(r',\w+\(t\[\w+\]===0\),t\.emit\(\"disconnect\"'),
+]
+print(sum(len(p.findall(content)) for p in patterns))
+")
+
+  if [[ "$remaining" -gt 0 ]]; then
+    echo "  ❌  $label — $remaining assertion(s) still present after patch!" >&2
+    rm -f "$tmp"
+    return 1
+  fi
+
+  if ! node --check "$tmp" 2>/dev/null; then
+    echo "  ❌  $label — syntax check failed, restoring backup" >&2
+    cp "$backup" "$file"
+    rm -f "$tmp"
+    return 1
+  fi
+
+  mv "$tmp" "$file"
+  echo "  🔧  $label — removed $patched assertion(s) ✅"
+}
+
+# ── Patch all known bundle files ─────────────────────────────────────────────
 ERRORS=0
+patch_bundle "$COPILOT_DIR/index.js"     || ERRORS=$((ERRORS + 1))
+patch_bundle "$COPILOT_DIR/sdk/index.js" || ERRORS=$((ERRORS + 1))
 
-if $H1_FOUND && grep -qF "$H1_NEEDLE" "$INDEX"; then
-  echo "❌  H1 assertion still present!" >&2
-  ERRORS=$((ERRORS + 1))
-fi
-if $H2_FOUND && grep -qF "$H2_NEEDLE" "$INDEX"; then
-  echo "❌  H2 assertion still present!" >&2
-  ERRORS=$((ERRORS + 1))
-fi
-
-if [[ $ERRORS -gt 0 ]]; then
-  echo "❌  Patch failed. Restoring backup..." >&2
-  cp "$BACKUP" "$INDEX"
+if [[ "$ERRORS" -gt 0 ]]; then
+  echo ""
+  echo "❌  $ERRORS bundle(s) failed to patch." >&2
   exit 1
 fi
 
-# Quick syntax check
-if ! node --check "$INDEX" 2>/dev/null; then
-  echo "❌  Syntax check failed. Restoring backup..." >&2
-  cp "$BACKUP" "$INDEX"
-  exit 1
-fi
-
-echo "✅  Patch applied and verified successfully."
+echo ""
+echo "✅  All bundles patched successfully."
