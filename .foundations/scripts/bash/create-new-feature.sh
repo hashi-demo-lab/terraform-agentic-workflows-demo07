@@ -5,6 +5,7 @@ set -e
 JSON_MODE=false
 SHORT_NAME=""
 BRANCH_NUMBER=""
+WORKFLOW_TYPE="module"
 ARGS=()
 i=1
 while [ $i -le $# ]; do
@@ -54,20 +55,33 @@ while [ $i -le $# ]; do
             # Use issue number as branch number
             BRANCH_NUMBER="$next_arg"
             ;;
+        --workflow)
+            if [ $((i + 1)) -gt $# ]; then
+                echo 'Error: --workflow requires a value (module, provider, consumer)' >&2
+                exit 1
+            fi
+            i=$((i + 1))
+            next_arg="${!i}"
+            case "$next_arg" in
+                module|provider|consumer) WORKFLOW_TYPE="$next_arg" ;;
+                *) echo "Error: --workflow must be one of: module, provider, consumer" >&2; exit 1 ;;
+            esac
+            ;;
         --help|-h)
-            echo "Usage: $0 [--json] [--short-name <name>] [--number N] [--issue N] <feature_description>"
+            echo "Usage: $0 [--json] [--short-name <name>] [--number N] [--issue N] [--workflow TYPE] <feature_description>"
             echo ""
             echo "Options:"
             echo "  --json              Output in JSON format"
             echo "  --short-name <name> Provide a custom short name (2-4 words) for the branch"
             echo "  --number N          Specify branch number manually (overrides auto-detection)"
             echo "  --issue N           Use GitHub issue number as the branch number"
+            echo "  --workflow TYPE     Workflow type: module (default), provider, consumer"
             echo "  --help, -h          Show this help message"
             echo ""
             echo "Creates:"
             echo "  - Git feature branch: NNN-<short-name>"
             echo "  - Feature directory:  specs/NNN-<short-name>/"
-            echo "  - Design document:    specs/NNN-<short-name>/design.md (from template)"
+            echo "  - Design document:    specs/NNN-<short-name>/<design-file> (from workflow template)"
             echo ""
             echo "Examples:"
             echo "  $0 'Add user authentication system' --short-name 'user-auth'"
@@ -326,8 +340,20 @@ fi
 FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
 mkdir -p "$FEATURE_DIR"
 
-TEMPLATE="$REPO_ROOT/.foundations/templates/module-design-template.md"
-DESIGN_FILE="$FEATURE_DIR/design.md"
+case "$WORKFLOW_TYPE" in
+    module)
+        TEMPLATE="$REPO_ROOT/.foundations/templates/module-design-template.md"
+        DESIGN_FILE="$FEATURE_DIR/design.md"
+        ;;
+    provider)
+        TEMPLATE="$REPO_ROOT/.foundations/templates/provider-design-template.md"
+        DESIGN_FILE="$FEATURE_DIR/provider-design.md"
+        ;;
+    consumer)
+        TEMPLATE="$REPO_ROOT/.foundations/templates/consumer-design-template.md"
+        DESIGN_FILE="$FEATURE_DIR/consumer-design.md"
+        ;;
+esac
 if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$DESIGN_FILE"; else touch "$DESIGN_FILE"; fi
 
 # Set the SPECIFY_FEATURE environment variable for the current session
