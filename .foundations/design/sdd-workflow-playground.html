@@ -2320,132 +2320,235 @@ body.has-selection .node.dimmed { opacity: 0.15; }
   <p class="chapter-subtitle">MCP tools, deny permissions, dev containers, git integration, and agent identity boundaries</p>
 </div>
 
+<div style="max-width:680px;margin:0 auto 8px;padding:0 28px;">
+  <p style="font-family:'Source Sans 3','Source Sans Pro',sans-serif;font-size:17px;line-height:1.7;color:#4A4A48;text-align:left;">
+    Autonomous agents need hard boundaries. Without guardrails, an AI agent with write access to your infrastructure is indistinguishable from an insider threat. This chapter layers eight complementary controls &mdash; from network isolation and secret detection to policy-as-code and identity federation &mdash; so agents operate with the minimum privilege needed and every action is auditable.
+  </p>
+</div>
+
 <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
-  <svg viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <!-- Subtle dot pattern for texture -->
-      <pattern id="guard-dots" width="16" height="16" patternUnits="userSpaceOnUse">
+      <pattern id="ge2e-dots" width="16" height="16" patternUnits="userSpaceOnUse">
         <circle cx="2" cy="2" r="0.5" fill="#E0DCD4" opacity="0.5"/>
       </pattern>
-      <!-- Glow for center agent -->
-      <filter id="agent-glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="8" result="blur"/>
-        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-      </filter>
-      <filter id="guard-shadow" x="-5%" y="-5%" width="110%" height="120%">
+      <filter id="ge2e-shadow" x="-5%" y="-5%" width="110%" height="120%">
         <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.06"/>
       </filter>
+      <marker id="ge2e-arr" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+        <path d="M0,0.5 L7,3 L0,5.5" fill="none" stroke="#C4283A" stroke-width="1"/>
+      </marker>
+      <marker id="ge2e-arr-g" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+        <path d="M0,0.5 L7,3 L0,5.5" fill="none" stroke="#2D7A4F" stroke-width="1"/>
+      </marker>
     </defs>
 
     <!-- Background -->
-    <rect x="0" y="0" width="680" height="280" rx="10" fill="#FAFAF8"/>
-    <rect x="0" y="0" width="680" height="280" rx="10" fill="url(#guard-dots)"/>
-    <rect x="0" y="0" width="680" height="280" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
+    <rect x="0" y="0" width="680" height="420" rx="10" fill="#FAFAF8"/>
+    <rect x="0" y="0" width="680" height="420" rx="10" fill="url(#ge2e-dots)"/>
+    <rect x="0" y="0" width="680" height="420" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
 
-    <!-- Layer 1: Dev Container — outermost -->
-    <rect x="24" y="14" width="500" height="248" rx="12" fill="rgba(196,40,58,0.04)" stroke="#C4283A" stroke-width="1.5">
-      <animate attributeName="opacity" values="0.85;1;0.85" dur="4s" repeatCount="indefinite"/>
-    </rect>
-    <!-- Dev Container badge -->
-    <rect x="32" y="22" width="106" height="20" rx="10" fill="#C4283A"/>
-    <text x="85" y="35" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="white" letter-spacing="1" font-weight="700">DEV CONTAINER</text>
+    <!-- === Phase columns === -->
+    <!-- Phase 1: Development -->
+    <rect x="12" y="38" width="216" height="340" rx="8" fill="rgba(196,40,58,0.025)" stroke="rgba(196,40,58,0.12)" stroke-width="1"/>
+    <text x="120" y="28" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A" letter-spacing="2" font-weight="700">DEVELOPMENT</text>
 
-    <!-- Layer 2: Constitution -->
-    <rect x="48" y="52" width="464" height="196" rx="10" fill="rgba(107,63,160,0.06)" stroke="#6B3FA0" stroke-width="1.5">
-      <animate attributeName="opacity" values="0.85;1;0.85" dur="4s" repeatCount="indefinite" begin="0.3s"/>
-    </rect>
-    <!-- Constitution badge -->
-    <rect x="56" y="60" width="102" height="20" rx="10" fill="#6B3FA0"/>
-    <text x="107" y="73" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="white" letter-spacing="1" font-weight="700">CONSTITUTION</text>
+    <!-- Phase 2: Commit -->
+    <rect x="236" y="38" width="186" height="340" rx="8" fill="rgba(154,123,45,0.025)" stroke="rgba(154,123,45,0.12)" stroke-width="1"/>
+    <text x="329" y="28" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9A7B2D" letter-spacing="2" font-weight="700">COMMIT</text>
 
-    <!-- Layer 3: MCP Tools -->
-    <rect x="72" y="90" width="428" height="144" rx="8" fill="rgba(154,123,45,0.06)" stroke="#9A7B2D" stroke-width="1.5">
-      <animate attributeName="opacity" values="0.85;1;0.85" dur="4s" repeatCount="indefinite" begin="0.6s"/>
-    </rect>
-    <!-- MCP Tools badge -->
-    <rect x="80" y="98" width="86" height="20" rx="10" fill="#9A7B2D"/>
-    <text x="123" y="111" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="white" letter-spacing="1" font-weight="700">MCP TOOLS</text>
-    <!-- Tool count badge -->
-    <rect x="172" y="98" width="46" height="20" rx="10" fill="#9A7B2D" opacity="0.15"/>
-    <text x="195" y="111" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9A7B2D" font-weight="700">8 tools</text>
+    <!-- Phase 3: Deploy -->
+    <rect x="430" y="38" width="238" height="340" rx="8" fill="rgba(45,122,79,0.025)" stroke="rgba(45,122,79,0.12)" stroke-width="1"/>
+    <text x="549" y="28" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F" letter-spacing="2" font-weight="700">DEPLOY</text>
 
-    <!-- Layer 4: Deny Permissions -->
-    <rect x="96" y="128" width="392" height="92" rx="8" fill="rgba(160,48,48,0.04)" stroke="#A03030" stroke-width="1.5" stroke-dasharray="5 3">
-      <animate attributeName="opacity" values="0.85;1;0.85" dur="4s" repeatCount="indefinite" begin="0.9s"/>
-    </rect>
-    <!-- Deny badge -->
-    <rect x="104" y="136" width="126" height="20" rx="10" fill="#A03030"/>
-    <text x="167" y="149" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="white" letter-spacing="1" font-weight="700">DENY PERMISSIONS</text>
-
-    <!-- Center: Agent — solid filled circle with glow -->
-    <circle cx="300" cy="182" r="32" fill="#C4283A" opacity="0.12" filter="url(#agent-glow)">
-      <animate attributeName="opacity" values="0.08;0.15;0.08" dur="3s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="300" cy="182" r="32" fill="#C4283A">
+    <!-- === Agent circle (start) === -->
+    <circle cx="60" cy="80" r="22" fill="#C4283A">
       <animate attributeName="opacity" values="0.90;1;0.90" dur="3s" repeatCount="indefinite"/>
     </circle>
-    <text x="300" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="white" font-weight="700">AGENT</text>
-    <text x="300" y="194" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">Scoped</text>
+    <text x="60" y="76" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="white" font-weight="700">AGENT</text>
+    <text x="60" y="88" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="8" fill="rgba(255,255,255,0.8)">Scoped</text>
 
-    <!-- SVG shield icons at layer corners -->
-    <g opacity="0.25" transform="translate(42,220)">
-      <path d="M8,1 L15,4 L15,10 C15,14 8,17 8,17 C8,17 1,14 1,10 L1,4 Z" fill="none" stroke="#C4283A" stroke-width="1.2"/>
-    </g>
-    <g opacity="0.2" transform="translate(66,220)">
-      <path d="M8,1 L15,4 L15,10 C15,14 8,17 8,17 C8,17 1,14 1,10 L1,4 Z" fill="none" stroke="#6B3FA0" stroke-width="1.2"/>
-    </g>
-    <g opacity="0.15" transform="translate(90,220)">
-      <path d="M8,1 L15,4 L15,10 C15,14 8,17 8,17 C8,17 1,14 1,10 L1,4 Z" fill="none" stroke="#9A7B2D" stroke-width="1.2"/>
-    </g>
+    <!-- Arrow from agent to Dev Container -->
+    <line x1="82" y1="80" x2="100" y2="80" stroke="#C4283A" stroke-width="1" marker-end="url(#ge2e-arr)"/>
 
-    <!-- Horizontal scanning line — more prominent -->
-    <rect x="24" y="180" width="80" height="2" rx="1" fill="#C4283A" opacity="0">
-      <animate attributeName="x" values="24;500" dur="4s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0;0.25;0" dur="4s" repeatCount="indefinite"/>
+    <!-- === Dev Container card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="104" y="56" width="116" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="104" y="56" width="4" height="48" rx="2" fill="#C4283A"/>
+    <text x="116" y="74" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Dev Container</text>
+    <text x="116" y="90" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Isolation boundary</text>
+    <rect x="104" y="56" width="116" height="48" rx="6" fill="none" stroke="rgba(196,40,58,0.08)" stroke-width="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite"/>
     </rect>
 
-    <!-- Right side legend -->
-    <g transform="translate(542,30)">
-      <rect x="0" y="0" width="120" height="218" rx="8" fill="#F5F3EF" stroke="#E0DCD4" stroke-width="0.8"/>
-      <text x="60" y="20" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#8A8A8A" letter-spacing="1.5" font-weight="600">LAYER PROVIDES</text>
-      <line x1="12" y1="28" x2="108" y2="28" stroke="#E0DCD4" stroke-width="0.5"/>
-
-      <!-- Dev Container -->
-      <rect x="10" y="38" width="8" height="8" rx="2" fill="#C4283A"/>
-      <text x="24" y="46" font-family="Source Sans 3,sans-serif" font-size="10" fill="#1A1A1A" font-weight="600">Isolation</text>
-      <text x="24" y="58" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Network + filesystem</text>
-
-      <!-- Constitution -->
-      <rect x="10" y="72" width="8" height="8" rx="2" fill="#6B3FA0"/>
-      <text x="24" y="80" font-family="Source Sans 3,sans-serif" font-size="10" fill="#1A1A1A" font-weight="600">Behavioral rules</text>
-      <text x="24" y="92" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Agent identity scope</text>
-
-      <!-- MCP Tools -->
-      <rect x="10" y="106" width="8" height="8" rx="2" fill="#9A7B2D"/>
-      <text x="24" y="114" font-family="Source Sans 3,sans-serif" font-size="10" fill="#1A1A1A" font-weight="600">Controlled access</text>
-      <text x="24" y="126" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">API + registry tools</text>
-
-      <!-- Deny Permissions -->
-      <rect x="10" y="140" width="8" height="8" rx="2" fill="#A03030"/>
-      <text x="24" y="148" font-family="Source Sans 3,sans-serif" font-size="10" fill="#1A1A1A" font-weight="600">Hard denials</text>
-      <text x="24" y="160" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Block destructive ops</text>
-
-      <!-- Agent -->
-      <circle cx="14" cy="180" r="5" fill="#C4283A"/>
-      <text x="24" y="184" font-family="Source Sans 3,sans-serif" font-size="10" fill="#1A1A1A" font-weight="600">Scoped agent</text>
-      <text x="24" y="196" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Least privilege exec</text>
+    <!-- === Constitution card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="104" y="118" width="116" height="48" rx="6" fill="white"/>
     </g>
+    <rect x="104" y="118" width="4" height="48" rx="2" fill="#6B3FA0"/>
+    <text x="116" y="136" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Constitution</text>
+    <text x="116" y="152" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Behavioral rules</text>
+    <rect x="104" y="118" width="116" height="48" rx="6" fill="none" stroke="rgba(107,63,160,0.08)" stroke-width="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="0.3s"/>
+    </rect>
 
-    <!-- Caption bar -->
-    <rect x="140" y="260" width="400" height="16" rx="8" fill="#F5F3EF"/>
-    <text x="340" y="271" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="1.5">CONCENTRIC SAFETY LAYERS — DEFENSE IN DEPTH</text>
+    <!-- === MCP Tools card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="104" y="180" width="116" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="104" y="180" width="4" height="48" rx="2" fill="#9A7B2D"/>
+    <text x="116" y="198" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">MCP Tools</text>
+    <text x="116" y="214" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Allow-listed APIs</text>
+    <rect x="104" y="180" width="116" height="48" rx="6" fill="none" stroke="rgba(154,123,45,0.08)" stroke-width="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="0.6s"/>
+    </rect>
+
+    <!-- === Deny Permissions card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="104" y="242" width="116" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="104" y="242" width="4" height="48" rx="2" fill="#A03030"/>
+    <text x="116" y="260" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Deny Permissions</text>
+    <text x="116" y="276" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Block destructive ops</text>
+    <rect x="104" y="242" width="116" height="48" rx="6" fill="none" stroke="rgba(160,48,48,0.08)" stroke-width="1" stroke-dasharray="4 2">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="0.9s"/>
+    </rect>
+
+    <!-- Vertical connector: Dev → Constitution → MCP → Deny -->
+    <line x1="162" y1="104" x2="162" y2="118" stroke="rgba(196,40,58,0.2)" stroke-width="1"/>
+    <line x1="162" y1="166" x2="162" y2="180" stroke="rgba(107,63,160,0.2)" stroke-width="1"/>
+    <line x1="162" y1="228" x2="162" y2="242" stroke="rgba(154,123,45,0.2)" stroke-width="1"/>
+
+    <!-- "Writes code" label on vertical flow -->
+    <text x="45" y="178" font-family="Source Sans 3,sans-serif" font-size="8" fill="#8A8A8A" text-anchor="middle" transform="rotate(-90,45,178)">WRITES CODE</text>
+
+    <!-- === Horizontal flow: Dev phase → Commit phase === -->
+    <line x1="220" y1="204" x2="244" y2="204" stroke="#9A7B2D" stroke-width="1" opacity="0.4"/>
+
+    <!-- === Git Integration card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="248" y="56" width="162" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="248" y="56" width="4" height="48" rx="2" fill="#4A6B8A"/>
+    <text x="260" y="74" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Git Integration</text>
+    <text x="260" y="90" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Branch + checkpoint commits</text>
+    <rect x="248" y="56" width="162" height="48" rx="6" fill="none" stroke="rgba(74,107,138,0.08)" stroke-width="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="1.2s"/>
+    </rect>
+
+    <!-- === Vault Radar card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="248" y="118" width="162" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="248" y="118" width="4" height="48" rx="2" fill="#D4843A"/>
+    <text x="260" y="136" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Vault Radar</text>
+    <text x="260" y="152" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Pre-commit secret scan</text>
+    <rect x="248" y="118" width="162" height="48" rx="6" fill="none" stroke="rgba(212,132,58,0.08)" stroke-width="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="1.5s"/>
+    </rect>
+
+    <!-- BLOCK badge on Vault Radar -->
+    <rect x="370" y="127" width="34" height="14" rx="3" fill="#C4283A" opacity="0.9">
+      <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite"/>
+    </rect>
+    <text x="387" y="137" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="white" font-weight="700">BLOCK</text>
+
+    <!-- Vertical connector: Git → Vault Radar -->
+    <line x1="329" y1="104" x2="329" y2="118" stroke="rgba(74,107,138,0.2)" stroke-width="1"/>
+
+    <!-- "git commit" label -->
+    <text x="329" y="188" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D" opacity="0.5">git push</text>
+
+    <!-- === Horizontal flow: Commit phase → Deploy phase === -->
+    <line x1="410" y1="142" x2="438" y2="142" stroke="#2D7A4F" stroke-width="1" opacity="0.4"/>
+
+    <!-- === Agent Identity card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="442" y="56" width="218" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="442" y="56" width="4" height="48" rx="2" fill="#5C5CA8"/>
+    <text x="454" y="74" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Agent Identity &amp; OIDC</text>
+    <text x="454" y="90" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Short-lived tokens, no secrets</text>
+    <rect x="442" y="56" width="218" height="48" rx="6" fill="none" stroke="rgba(92,92,168,0.08)" stroke-width="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="1.8s"/>
+    </rect>
+
+    <!-- === Private Registry card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="442" y="118" width="218" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="442" y="118" width="4" height="48" rx="2" fill="#2D7A4F"/>
+    <text x="454" y="136" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Private Module Registry</text>
+    <text x="454" y="152" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Approved modules only</text>
+    <rect x="442" y="118" width="218" height="48" rx="6" fill="none" stroke="rgba(45,122,79,0.08)" stroke-width="1">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="2.1s"/>
+    </rect>
+
+    <!-- === Sentinel card === -->
+    <g filter="url(#ge2e-shadow)">
+      <rect x="442" y="180" width="218" height="48" rx="6" fill="white"/>
+    </g>
+    <rect x="442" y="180" width="4" height="48" rx="2" fill="#C4283A"/>
+    <text x="454" y="198" font-family="Source Sans 3,sans-serif" font-size="11" fill="#1A1A1A" font-weight="700">Sentinel Policy</text>
+    <text x="454" y="214" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">Policy check on every plan</text>
+    <!-- GATE badge -->
+    <rect x="602" y="188" width="50" height="14" rx="3" fill="none" stroke="#C4283A" stroke-width="1" stroke-dasharray="3 2">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+    </rect>
+    <text x="627" y="198" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#C4283A" font-weight="700">GATE</text>
+
+    <!-- Vertical connectors: Deploy phase -->
+    <line x1="551" y1="104" x2="551" y2="118" stroke="rgba(92,92,168,0.2)" stroke-width="1"/>
+    <line x1="551" y1="166" x2="551" y2="180" stroke="rgba(45,122,79,0.2)" stroke-width="1"/>
+
+    <!-- Arrow: Sentinel → HCP Terraform Apply -->
+    <line x1="551" y1="228" x2="551" y2="250" stroke="#2D7A4F" stroke-width="1" marker-end="url(#ge2e-arr-g)"/>
+
+    <!-- === HCP Terraform Apply (output) === -->
+    <rect x="480" y="256" width="140" height="36" rx="6" fill="#2D7A4F">
+      <animate attributeName="opacity" values="0.88;1;0.88" dur="3s" repeatCount="indefinite"/>
+    </rect>
+    <text x="550" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="white" font-weight="700">terraform apply</text>
+
+    <!-- === Animated flow particle: left to right across all phases === -->
+    <circle r="3" fill="#C4283A" opacity="0">
+      <animateMotion dur="6s" repeatCount="indefinite" path="M60,80 L162,80 L162,266 L220,204 L329,80 L329,142 L410,142 L551,80 L551,256"/>
+      <animate attributeName="opacity" values="0;0.5;0.5;0.5;0" dur="6s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- === Horizontal scanning line === -->
+    <rect x="12" y="200" width="60" height="1.5" rx="1" fill="#C4283A" opacity="0">
+      <animate attributeName="x" values="12;640" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;0.15;0" dur="5s" repeatCount="indefinite"/>
+    </rect>
+
+    <!-- === Phase count badges === -->
+    <rect x="30" y="310" width="38" height="16" rx="8" fill="rgba(196,40,58,0.08)"/>
+    <text x="49" y="321" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A" font-weight="600">4</text>
+    <text x="76" y="321" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">controls at dev time</text>
+
+    <rect x="248" y="310" width="38" height="16" rx="8" fill="rgba(154,123,45,0.08)"/>
+    <text x="267" y="321" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D" font-weight="600">2</text>
+    <text x="294" y="321" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">controls at commit</text>
+
+    <rect x="442" y="310" width="38" height="16" rx="8" fill="rgba(45,122,79,0.08)"/>
+    <text x="461" y="321" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2D7A4F" font-weight="600">3</text>
+    <text x="488" y="321" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">controls at deploy</text>
+
+    <!-- Principle statement -->
+    <text x="340" y="352" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#4A4A48" font-weight="600">Every agent action passes through at least one guardrail before reaching infrastructure.</text>
+
+    <!-- === Caption bar === -->
+    <rect x="140" y="396" width="400" height="16" rx="8" fill="#F5F3EF"/>
+    <text x="340" y="407" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="1.5">END-TO-END GUARDRAIL COVERAGE — 8 CONTROLS, 3 PHASES</text>
   </svg>
 </div>
 
 <!-- Guardrails: MCP Tools -->
 <div class="subsection" id="guardrails-mcp-tools" data-sub="MCP Tools">
   <h3 class="subsection-title">MCP Tools</h3>
-  <p class="subsection-desc">Model Context Protocol tools for controlled external API access</p>
+  <p class="subsection-desc">Model Context Protocol tools for controlled external API access — agents get structured, allow-listed tool access instead of unrestricted shell commands.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -2612,7 +2715,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
 <!-- Guardrails: Deny Permissions -->
 <div class="subsection" id="guardrails-deny-permissions" data-sub="Deny Permissions">
   <h3 class="subsection-title">Deny Permissions</h3>
-  <p class="subsection-desc">Restricting what agents can do -- deny by default, allow explicitly</p>
+  <p class="subsection-desc">Restricting what agents can do &mdash; deny by default, allow explicitly, so agents cannot execute destructive operations even if hallucinated instructions suggest otherwise.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -2776,7 +2879,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
 <!-- Guardrails: Dev Containers -->
 <div class="subsection" id="guardrails-dev-containers" data-sub="Dev Containers">
   <h3 class="subsection-title">Development Containers</h3>
-  <p class="subsection-desc">Reproducible, isolated environments with pre-installed toolchains</p>
+  <p class="subsection-desc">Reproducible, isolated environments with pre-installed toolchains — agents run inside sandboxed containers so a misconfigured command cannot escape to the host.</p>
   <div class="card-grid">
     <div class="ed-card">
       <h3>Docker-in-Docker</h3>
@@ -2801,7 +2904,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
 <!-- Guardrails: Git Integration -->
 <div class="subsection" id="guardrails-git-integration" data-sub="Git Integration">
   <h3 class="subsection-title">Git Integration</h3>
-  <p class="subsection-desc">Structured version control patterns for traceable, reversible agent work</p>
+  <p class="subsection-desc">Structured version control patterns for traceable, reversible agent work — every agent action is committed to a branch, making any change auditable and one revert away from rollback.</p>
   <div class="card-grid">
     <div class="ed-card">
       <h3>Feature Branches per Task</h3>
@@ -2829,7 +2932,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
 <!-- Guardrails: Agent Identity -->
 <div class="subsection" id="guardrails-agent-identity" data-sub="Agent Identity">
   <h3 class="subsection-title">Agent Identity &amp; Workload Federation</h3>
-  <p class="subsection-desc">Credential-free agent operations through OIDC federation</p>
+  <p class="subsection-desc">Credential-free agent operations through OIDC federation — agents never see long-lived secrets, receiving short-lived tokens scoped to a single run.</p>
   <div class="card-grid">
     <div class="ed-card">
       <h3>Agent Never Sees Credentials</h3>
@@ -2853,7 +2956,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
 
 <div class="subsection" id="guardrails-private-registry" data-sub="Private Registry">
   <h3 class="subsection-title">Private Module Registry</h3>
-  <p class="subsection-desc">Curated, versioned modules as the only source for consumer compositions</p>
+  <p class="subsection-desc">Curated, versioned modules as the only source for consumer compositions — agents compose from approved building blocks rather than inventing bespoke resource configurations.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -2969,7 +3072,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
 
 <div class="subsection" id="guardrails-sentinel" data-sub="Sentinel Policy">
   <h3 class="subsection-title">Sentinel Policy as Code</h3>
-  <p class="subsection-desc">Automated policy enforcement on every Terraform run</p>
+  <p class="subsection-desc">Automated policy enforcement on every Terraform run — agent-generated plans are evaluated against organisational rules before any infrastructure change is applied.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -3092,7 +3195,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
 
 <div class="subsection" id="guardrails-vault-radar" data-sub="Vault Radar">
   <h3 class="subsection-title">Vault Radar &amp; Pre-Commit</h3>
-  <p class="subsection-desc">Secret detection before code leaves the developer's machine</p>
+  <p class="subsection-desc">Secret detection before code leaves the developer's machine — agents are blocked from committing leaked credentials, catching mistakes before they reach version control.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
       <defs>
