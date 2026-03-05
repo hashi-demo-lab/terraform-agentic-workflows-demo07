@@ -1235,7 +1235,7 @@ body.has-selection .node.dimmed { opacity: 0.15; }
   <div class="card-grid">
     <div class="ed-card">
       <h3>Isolated Execution</h3>
-      <p>Each subagent runs in its own context window with a focused task, limited tools, and returns results in-memory. Key benefit: blast radius containment.</p>
+      <p>Each subagent runs in its own context window with a focused task, limited tools, and returns results to disk. Key benefit: separation of duty and context extension through task breakdown.</p>
       <div class="node-row"><div class="node node-concept" data-id="concept-subagents" data-type="concept">concept-subagents</div></div>
     </div>
     <div class="ed-card">
@@ -5469,7 +5469,7 @@ const nodeDesc = {
   'tf-validate-final': 'terraform validate in Phase 4 quality assessment.',
   'tf-plan-final': 'terraform plan in Phase 4 quality assessment.',
   'concept-skills': 'Skills are reusable prompt modules (markdown files) loaded into agent context on demand. They encode domain expertise — style guides, patterns, rubrics — without requiring code changes.',
-  'concept-subagents': 'Subagents are isolated child processes spawned by an orchestrator. Each gets a focused task, limited tools, and returns results in-memory. Key benefit: blast radius containment.',
+  'concept-subagents': 'Subagents are isolated child processes spawned by an orchestrator. Each gets a focused task, limited tools, and returns results to disk. Key benefit: separation of duty and context extension through task breakdown.',
   'concept-context-engineering': 'Context engineering is the discipline of controlling what information enters an agent\'s context window. Key strategies: constitution files (always loaded), skills (loaded on demand), $ARGUMENTS (passed at invocation), and the P1-P9 priority system.',
   'concept-concurrency': 'Concurrent agent patterns: fan-out/fan-in (multiple research agents), pipeline (sequential handoffs), and map-reduce (parallel work + merge). The orchestrator controls concurrency.',
   'concept-throughput': 'Maximizing throughput means keeping agents productive: use concurrent research (3-4 agents), checkpoint commits after each item, trust-but-verify gates.',
