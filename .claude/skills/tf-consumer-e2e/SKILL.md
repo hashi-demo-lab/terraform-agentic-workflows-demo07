@@ -6,10 +6,6 @@ user-invocable: true
 
 # E2E Test Orchestrator — Consumer
 
-## Workflow
-
-exewcute all non-interactively with best practice decisions Validate implementation against checklist and quality standards, and report final status.
-
 ---
 
 ## PART 1: PLANNING
