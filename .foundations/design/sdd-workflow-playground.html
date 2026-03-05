@@ -1247,8 +1247,8 @@ body.has-selection .node.dimmed { opacity: 0.15; }
       <p>Different subagents can use different models based on task complexity. Research agents may use faster models while design agents use more capable ones.</p>
     </div>
     <div class="ed-card">
-      <h3>In-Memory Results</h3>
-      <p>Subagents return findings to the orchestrator in-memory (under 500 tokens). No intermediate files needed for simple handoffs between phases.</p>
+      <h3>Disk-Based Artifacts</h3>
+      <p>Subagents collate information and write outputs to disk (specs/{feature}/design.md, tests/, README.md) for use downstream. File-based handoffs keep context windows lean and create durable artifacts.</p>
     </div>
   </div>
 </div>
