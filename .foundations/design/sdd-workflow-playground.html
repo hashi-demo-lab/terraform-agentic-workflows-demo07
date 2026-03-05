@@ -2034,7 +2034,7 @@ No other files, no shared state, no intermediate artifacts.</pre>
       <text x="340" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="white" font-weight="700">HAIKU</text>
 
       <!-- Cost arrow -->
-      <text x="430" y="62" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">$$$$</text>
+      <text x="430" y="62" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">$$$</text>
       <text x="430" y="100" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">$$</text>
       <text x="430" y="138" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">$</text>
 
@@ -2755,7 +2755,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 <div class="chapter-divider" id="guardrails" data-section="guardrails">
   <div class="chapter-number">Chapter Two</div>
   <h2 class="chapter-title">Guardrails</h2>
-  <p class="chapter-subtitle">MCP tools, deny permissions, dev containers, git integration, and agent identity boundaries</p>
+  <p class="chapter-subtitle">Controlled tool access, least-privilege permissions, reproducible environments, audit trails, and credential-free authentication</p>
 </div>
 
 <div style="max-width:680px;margin:0 auto 8px;padding:0 28px;">
@@ -2986,7 +2986,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 <!-- Guardrails: MCP Tools -->
 <div class="subsection" id="guardrails-mcp-tools" data-sub="MCP Tools">
   <h3 class="subsection-title">MCP Tools</h3>
-  <p class="subsection-desc">Model Context Protocol tools for controlled external API access — agents get structured, allow-listed tool access instead of unrestricted shell commands.</p>
+  <p class="subsection-desc">Model Context Protocol servers provide agents with structured access to external APIs like the HCP Terraform registry and AWS documentation. Tools are scoped per agent via allowlists — a research agent can search but not modify, while a developer agent can read and write but not create runs.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -3208,7 +3208,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 <!-- Guardrails: Deny Permissions -->
 <div class="subsection" id="guardrails-deny-permissions" data-sub="Deny Permissions">
   <h3 class="subsection-title">Deny Permissions</h3>
-  <p class="subsection-desc">Restricting what agents can do &mdash; deny by default, allow explicitly, so agents cannot execute destructive operations even if hallucinated instructions suggest otherwise.</p>
+  <p class="subsection-desc">Explicit deny rules prevent agents from executing destructive operations — blocking MCP tools like <code>create_run</code>, protecting config files from modification, and restricting file system access. Combined with scoped tool allowlists, this creates a least-privilege boundary around every agent.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -3445,7 +3445,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 <!-- Guardrails: Dev Containers -->
 <div class="subsection" id="guardrails-dev-containers" data-sub="Dev Containers">
   <h3 class="subsection-title">Development Containers</h3>
-  <p class="subsection-desc">Reproducible, isolated environments with pre-installed toolchains — agents run inside sandboxed containers so a misconfigured command cannot escape to the host.</p>
+  <p class="subsection-desc">Reproducible, isolated environments with pre-installed toolchains and OTEL telemetry. Dev containers ensure every agent session starts with identical tool versions, network restrictions, and environment variables — eliminating "works on my machine" drift.</p>
   <div class="card-grid">
     <details class="ed-card">
       <summary>
@@ -3530,7 +3530,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 <!-- Guardrails: Git Integration -->
 <div class="subsection" id="guardrails-git-integration" data-sub="Git Integration">
   <h3 class="subsection-title">Git Integration</h3>
-  <p class="subsection-desc">Structured version control patterns for traceable, reversible agent work — every agent action is committed to a branch, making any change auditable and one revert away from rollback.</p>
+  <p class="subsection-desc">Feature branches, checkpoint commits, and GitHub issues form the audit trail for every agent workflow. Scripts automate branch creation, structured commit messages, and issue progress updates — making agent work fully traceable and reversible.</p>
   <div class="card-grid">
     <details class="ed-card">
       <summary>
@@ -3611,7 +3611,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 <!-- Guardrails: Agent Identity -->
 <div class="subsection" id="guardrails-agent-identity" data-sub="Agent Identity">
   <h3 class="subsection-title">Agent Identity &amp; Workload Federation</h3>
-  <p class="subsection-desc">Credential-free agent operations through OIDC federation — agents never see long-lived secrets, receiving short-lived tokens scoped to a single run.</p>
+  <p class="subsection-desc">Agents authenticate via OIDC workload identity federation — no long-lived credentials are stored or passed. HCP Terraform issues short-lived tokens scoped to a single workspace run, ensuring agents operate with minimal privilege and zero static secrets.</p>
   <div class="card-grid">
     <details class="ed-card">
       <summary>
