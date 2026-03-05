@@ -6196,7 +6196,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
         <ul><li>Create <code>.claude/skills/[name]/SKILL.md</code> or <code>.agent/skills/[name]/SKILL.md</code></li><li>YAML frontmatter: name, description, user-invocable flag</li><li>Markdown body with domain knowledge and examples</li><li>Reference via slash command: <code>/[skill-name]</code></li></ul>
       </summary>
       <div class="card-expand">
-        <p>Skills use progressive disclosure: YAML frontmatter (~100 tokens, always loaded), SKILL.md body (&lt;5,000 tokens, loaded on activation), and linked files (scripts/, references/, assets/ -- loaded on demand). The context window is a public good -- only include what the model doesn't already know.</p>
+        <p>Skills use progressive disclosure: YAML frontmatter (~100 tokens, always loaded), SKILL.md body (max 5,000 tokens, loaded on activation), and linked files (scripts/, references/, assets/ -- loaded on demand). The context window is a public good -- only include what the model doesn't already know.</p>
         <ul>
           <li>SKILL.md must be exactly that name (case-sensitive) -- no variations like skill.md or SKILL.MD</li>
           <li>Folder naming: kebab-case only (e.g., <code>notion-project-setup</code>), no spaces, underscores, or capitals</li>
