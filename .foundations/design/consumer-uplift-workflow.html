@@ -282,7 +282,7 @@ body {
 
 <div class="subsection revealed" id="pipeline-diagram">
   <div class="svg-diagram" style="max-width:820px">
-    <svg viewBox="0 0 820 760" xmlns="http://www.w3.org/2000/svg">
+    <svg id="pipeline-svg" viewBox="0 0 820 450" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern id="pipe-grid" width="20" height="20" patternUnits="userSpaceOnUse">
           <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0DCD4" stroke-width="0.3" opacity="0.4"/>
@@ -295,312 +295,328 @@ body {
         </marker>
       </defs>
 
-      <!-- Background -->
-      <rect x="0" y="0" width="820" height="760" rx="10" fill="#FAFAF8"/>
-      <rect x="0" y="0" width="820" height="760" rx="10" fill="url(#pipe-grid)"/>
-      <rect x="0" y="0" width="820" height="760" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
+      <!-- Background (dynamic height via JS) -->
+      <rect id="bg-fill" x="0" y="0" width="820" height="450" rx="10" fill="#FAFAF8"/>
+      <rect id="bg-grid" x="0" y="0" width="820" height="450" rx="10" fill="url(#pipe-grid)"/>
+      <rect id="bg-border" x="0" y="0" width="820" height="450" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
 
       <!-- Title -->
       <text x="410" y="24" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="2.5">terraform-consumer-uplift.yml</text>
 
       <!-- ============================================ -->
-      <!-- === TRIGGER ZONE: Two entry points ========= -->
+      <!-- === DEPENDABOT (external service) ========== -->
       <!-- ============================================ -->
-
-      <!-- Shared container -->
       <g filter="url(#pipe-shadow)">
-        <rect x="20" y="38" width="780" height="72" rx="8" fill="white" stroke="var(--border)" stroke-width="1"/>
+        <rect x="20" y="36" width="170" height="62" rx="8" fill="#4A6B8A"/>
       </g>
-      <text x="410" y="54" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#8A8A8A" letter-spacing="2">SINGLE WORKFLOW FILE -- TWO ENTRY POINTS</text>
+      <text x="105" y="56" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">GITHUB</text>
+      <text x="105" y="74" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Dependabot</text>
+      <text x="105" y="89" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Monthly registry scan</text>
 
-      <!-- Path A: Automated -->
-      <rect x="30" y="62" width="370" height="38" rx="6" fill="#1A6B7A" opacity="0.06" stroke="#1A6B7A" stroke-width="1"/>
-      <text x="42" y="78" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="700" letter-spacing="1">PATH A: pull_request</text>
-      <text x="42" y="93" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">Dependabot PR or fallback scanner &rarr; Jobs 1-4</text>
-
-      <!-- Divider -->
-      <line x1="410" y1="65" x2="410" y2="97" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 2"/>
-
-      <!-- Path B: Interactive -->
-      <rect x="420" y="62" width="370" height="38" rx="6" fill="#6B3FA0" opacity="0.06" stroke="#6B3FA0" stroke-width="1"/>
-      <text x="432" y="78" font-family="JetBrains Mono,monospace" font-size="9" fill="#6B3FA0" font-weight="700" letter-spacing="1">PATH B: issue_comment @claude</text>
-      <text x="432" y="93" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">Human mentions @claude on PR &rarr; Interactive job</text>
+      <!-- Arrow from Dependabot to trigger -->
+      <line x1="195" y1="67" x2="228" y2="67" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
+      <text x="210" y="60" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#8A8A8A">PR</text>
 
       <!-- ============================================ -->
-      <!-- === PIPELINE JOBS (Path A) ================= -->
+      <!-- === TRIGGER: pull_request ================== -->
+      <!-- ============================================ -->
+      <g filter="url(#pipe-shadow)">
+        <rect x="232" y="36" width="568" height="62" rx="8" fill="white" stroke="#E0DCD4" stroke-width="1"/>
+      </g>
+      <text x="516" y="56" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#8A8A8A" letter-spacing="2">terraform-consumer-uplift.yml</text>
+      <text x="252" y="78" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="700" letter-spacing="1">on: pull_request</text>
+      <text x="410" y="78" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">triggers Jobs 1 &#8594; 2 &#8594; 3 &#8594; 4</text>
+
+      <!-- Arrow down to jobs -->
+      <line x1="410" y1="98" x2="410" y2="153" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
+
+      <!-- ============================================ -->
+      <!-- === PIPELINE JOBS ROW ====================== -->
       <!-- ============================================ -->
 
-      <!-- Downward arrow from Path A -->
-      <line x1="215" y1="110" x2="215" y2="125" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
-
-      <!-- === JOB 1: CLASSIFY === -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="130" width="170" height="62" rx="8" fill="#1A6B7A"/>
+      <!-- === JOB 1: CLASSIFY (clickable) === -->
+      <g id="job1-box" style="cursor:pointer" onclick="toggleJobDetail(1)">
+        <g filter="url(#pipe-shadow)">
+          <rect x="20" y="158" width="170" height="62" rx="8" fill="#1A6B7A"/>
+        </g>
+        <text x="105" y="176" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 1</text>
+        <text x="105" y="194" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Classify</text>
+        <text x="105" y="211" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Semver from git diff</text>
+        <text x="172" y="174" font-size="10" fill="white" opacity="0.5">&#9660;</text>
       </g>
-      <text x="105" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 1</text>
-      <text x="105" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Classify</text>
-      <text x="105" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Semver from git diff</text>
 
-      <!-- Arrow 1→2 -->
-      <line x1="195" y1="161" x2="218" y2="161" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
+      <line x1="195" y1="189" x2="218" y2="189" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
 
-      <!-- === JOB 2: VALIDATE === -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="222" y="130" width="170" height="62" rx="8" fill="#B87333"/>
+      <!-- === JOB 2: VALIDATE (clickable) === -->
+      <g id="job2-box" style="cursor:pointer" onclick="toggleJobDetail(2)">
+        <g filter="url(#pipe-shadow)">
+          <rect x="222" y="158" width="170" height="62" rx="8" fill="#B87333"/>
+        </g>
+        <text x="307" y="176" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 2</text>
+        <text x="307" y="194" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Validate</text>
+        <text x="307" y="211" text-anchor="middle" font-size="10" fill="white" opacity="0.75">fmt, validate, plan</text>
+        <text x="374" y="174" font-size="10" fill="white" opacity="0.5">&#9660;</text>
       </g>
-      <text x="307" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 2</text>
-      <text x="307" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Validate</text>
-      <text x="307" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">fmt, validate, plan</text>
 
-      <!-- Arrow 2→3 -->
-      <line x1="397" y1="161" x2="420" y2="161" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
+      <line x1="397" y1="189" x2="420" y2="189" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
 
-      <!-- === JOB 3: AI ANALYSIS === -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="424" y="130" width="195" height="62" rx="8" fill="#6B3FA0"/>
+      <!-- === JOB 3: AI ANALYSIS (clickable) === -->
+      <g id="job3-box" style="cursor:pointer" onclick="toggleJobDetail(3)">
+        <g filter="url(#pipe-shadow)">
+          <rect x="424" y="158" width="195" height="62" rx="8" fill="#6B3FA0"/>
+        </g>
+        <text x="521" y="176" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 3</text>
+        <text x="521" y="194" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">AI Analysis</text>
+        <text x="521" y="211" text-anchor="middle" font-size="10" fill="white" opacity="0.75">claude-code-action + MCP</text>
+        <text x="601" y="174" font-size="10" fill="white" opacity="0.5">&#9660;</text>
       </g>
-      <text x="521" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 3</text>
-      <text x="521" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">AI Analysis</text>
-      <text x="521" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">claude-code-action + MCP</text>
 
-      <!-- Arrow 3→4 -->
-      <line x1="624" y1="161" x2="647" y2="161" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
+      <line x1="624" y1="189" x2="647" y2="189" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
 
       <!-- === JOB 4: DECISION === -->
       <g filter="url(#pipe-shadow)">
-        <rect x="651" y="130" width="149" height="62" rx="8" fill="#C4283A"/>
+        <rect x="651" y="158" width="149" height="62" rx="8" fill="#C4283A"/>
       </g>
-      <text x="725" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 4</text>
-      <text x="725" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Decision</text>
-      <text x="725" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">fromJSON()</text>
+      <text x="725" y="176" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 4</text>
+      <text x="725" y="194" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Decision</text>
+      <text x="725" y="211" text-anchor="middle" font-size="10" fill="white" opacity="0.75">fromJSON()</text>
 
-      <!-- === ANIMATED PIPELINE FLOW: sequential dot traveling Job1→Job2→Job3→Job4 === -->
+      <!-- === ANIMATED PIPELINE FLOW === -->
       <circle r="4" fill="#1A6B7A" opacity="0">
-        <animateMotion dur="6s" repeatCount="indefinite" path="M105,192 L105,200 L307,200 L307,192" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
+        <animateMotion dur="6s" repeatCount="indefinite" path="M105,220 L105,228 L307,228 L307,220" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
         <animate attributeName="opacity" values="0;0.9;0.9;0" dur="6s" repeatCount="indefinite" keyTimes="0;0.05;0.95;1"/>
         <animate attributeName="fill" values="#1A6B7A;#1A6B7A;#B87333;#B87333" dur="6s" repeatCount="indefinite" keyTimes="0;0.4;0.6;1"/>
       </circle>
       <circle r="4" fill="#B87333" opacity="0">
-        <animateMotion dur="6s" repeatCount="indefinite" begin="1.5s" path="M307,192 L307,200 L521,200 L521,192" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
+        <animateMotion dur="6s" repeatCount="indefinite" begin="1.5s" path="M307,220 L307,228 L521,228 L521,220" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
         <animate attributeName="opacity" values="0;0.9;0.9;0" dur="6s" repeatCount="indefinite" begin="1.5s" keyTimes="0;0.05;0.95;1"/>
         <animate attributeName="fill" values="#B87333;#B87333;#6B3FA0;#6B3FA0" dur="6s" repeatCount="indefinite" begin="1.5s" keyTimes="0;0.4;0.6;1"/>
       </circle>
       <circle r="4" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="6s" repeatCount="indefinite" begin="3s" path="M521,192 L521,200 L725,200 L725,192" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
+        <animateMotion dur="6s" repeatCount="indefinite" begin="3s" path="M521,220 L521,228 L725,228 L725,220" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
         <animate attributeName="opacity" values="0;0.9;0.9;0" dur="6s" repeatCount="indefinite" begin="3s" keyTimes="0;0.05;0.95;1"/>
         <animate attributeName="fill" values="#6B3FA0;#6B3FA0;#C4283A;#C4283A" dur="6s" repeatCount="indefinite" begin="3s" keyTimes="0;0.4;0.6;1"/>
       </circle>
 
       <!-- ============================================ -->
-      <!-- === VALIDATE DETAIL (Job 2 expanded) ======= -->
-      <!-- ============================================ -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="215" width="460" height="80" rx="8" fill="white" stroke="#B87333" stroke-width="1.5"/>
-      </g>
-      <rect x="20" y="215" width="460" height="4" rx="2" fill="#B87333"/>
-      <text x="40" y="238" font-family="JetBrains Mono,monospace" font-size="10" fill="#B87333" letter-spacing="1.5" font-weight="700">JOB 2: DETERMINISTIC VALIDATION</text>
-
-      <!-- Steps: fmt → init → validate → tflint → plan -->
-      <rect x="35" y="248" width="44" height="20" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="57" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">fmt</text>
-      <text x="87" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="97" y="248" width="44" height="20" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="119" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">init</text>
-      <text x="149" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="159" y="248" width="64" height="20" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="191" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">validate</text>
-      <text x="231" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="241" y="248" width="50" height="20" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="266" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">tflint</text>
-      <text x="299" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="309" y="248" width="90" height="20" rx="4" fill="#B87333" opacity="0.1"/>
-      <text x="354" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="700">plan -detailed</text>
-
-      <!-- Exit codes -->
-      <text x="35" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">exit 0: comment + close PR</text>
-      <text x="210" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A">exit 1: label breaking</text>
-      <text x="380" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F">exit 2: &darr;</text>
-
-      <!-- ============================================ -->
-      <!-- === AI ANALYSIS DETAIL (Job 3 expanded) ==== -->
-      <!-- ============================================ -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="315" width="780" height="120" rx="8" fill="white" stroke="#6B3FA0" stroke-width="1.5"/>
-      </g>
-      <rect x="20" y="315" width="780" height="4" rx="2" fill="#6B3FA0"/>
-      <text x="40" y="340" font-family="JetBrains Mono,monospace" font-size="10" fill="#6B3FA0" letter-spacing="1.5" font-weight="700">JOB 3: claude-code-action + TERRAFORM MCP SERVER</text>
-      <text x="710" y="340" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">--json-schema</text>
-
-      <!-- 5 sub-tasks -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="35" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="100" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5A: INTERFACE DIFF</text>
-      <text x="100" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">old vs new inputs/outputs</text>
-      <text x="100" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D">MCP: module_details</text>
-
-      <g filter="url(#pipe-shadow)">
-        <rect x="175" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="240" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5B: ADAPT CONFIG</text>
-      <text x="240" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">fix code, push to PR</text>
-      <text x="240" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#1A6B7A">contents: write</text>
-
-      <g filter="url(#pipe-shadow)">
-        <rect x="315" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="380" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5C: SECURITY</text>
-      <text x="380" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">IAM, encryption, exposure</text>
-      <text x="380" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">severity rating</text>
-
-      <g filter="url(#pipe-shadow)">
-        <rect x="455" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="520" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5D: PLAN ANALYSIS</text>
-      <text x="520" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">add/change/destroy</text>
-      <text x="520" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#B87333">blast radius</text>
-
-      <!-- Aggregation to 5E -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="595" y="352" width="190" height="52" rx="6" fill="#6B3FA0" opacity="0.06" stroke="#6B3FA0" stroke-width="1.5"/>
-      </g>
-      <text x="690" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5E: RECOMMENDATION</text>
-      <text x="690" y="386" text-anchor="middle" font-size="10" fill="#3D3D3D">Decision Matrix &rarr; JSON</text>
-      <text x="690" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">structured_output</text>
-
-      <!-- Animated particles from 5A-5D to 5E (sequential, staggered) -->
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0s" path="M100,404 L100,416 L690,416 L690,404"/>
-        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0s" keyTimes="0;0.1;0.85;1"/>
-      </circle>
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0.6s" path="M240,404 L240,416 L690,416 L690,404"/>
-        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0.6s" keyTimes="0;0.1;0.85;1"/>
-      </circle>
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.2s" path="M380,404 L380,416 L690,416 L690,404"/>
-        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.2s" keyTimes="0;0.1;0.85;1"/>
-      </circle>
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.8s" path="M520,404 L520,416 L690,416 L690,404"/>
-        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.8s" keyTimes="0;0.1;0.85;1"/>
-      </circle>
-
-      <!-- ============================================ -->
-      <!-- === DECISION OUTCOMES ====================== -->
+      <!-- === DETAIL PANELS (inline, hidden) ========= -->
       <!-- ============================================ -->
 
-      <!-- Arrow from 5E down -->
-      <line x1="690" y1="410" x2="690" y2="445" stroke="#C0BDB5" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <!-- JOB 1 DETAIL: CLASSIFY -->
+      <g id="job1-detail" visibility="hidden">
+        <g filter="url(#pipe-shadow)">
+          <rect x="20" y="228" width="780" height="65" rx="8" fill="white" stroke="#1A6B7A" stroke-width="1.5"/>
+        </g>
+        <rect x="20" y="228" width="780" height="4" rx="2" fill="#1A6B7A"/>
+        <text x="40" y="251" font-family="JetBrains Mono,monospace" font-size="10" fill="#1A6B7A" letter-spacing="1.5" font-weight="700">JOB 1: SEMVER CLASSIFICATION</text>
 
-      <!-- Auto-merge -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="460" width="240" height="52" rx="8" fill="white" stroke="#2D7A4F" stroke-width="1.5"/>
+        <rect x="36" y="261" width="64" height="18" rx="4" fill="#1A6B7A" opacity="0.08"/>
+        <text x="68" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="600">git diff</text>
+        <text x="108" y="273" font-size="12" fill="#8A8A8A">&#8594;</text>
+        <rect x="118" y="261" width="100" height="18" rx="4" fill="#1A6B7A" opacity="0.08"/>
+        <text x="168" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="600">parse modules</text>
+        <text x="226" y="273" font-size="12" fill="#8A8A8A">&#8594;</text>
+        <rect x="236" y="261" width="92" height="18" rx="4" fill="#1A6B7A" opacity="0.08"/>
+        <text x="282" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="600">detect bump</text>
+        <text x="336" y="273" font-size="12" fill="#8A8A8A">&#8594;</text>
+        <rect x="346" y="261" width="100" height="18" rx="4" fill="#1A6B7A" opacity="0.1"/>
+        <text x="396" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="700">label PR</text>
+        <rect x="480" y="261" width="58" height="18" rx="4" fill="#2D7A4F" opacity="0.12"/>
+        <text x="509" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2D7A4F" font-weight="700">patch</text>
+        <rect x="544" y="261" width="58" height="18" rx="4" fill="#9A7B2D" opacity="0.12"/>
+        <text x="573" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D" font-weight="700">minor</text>
+        <rect x="608" y="261" width="58" height="18" rx="4" fill="#C4283A" opacity="0.12"/>
+        <text x="637" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A" font-weight="700">major</text>
+        <g style="cursor:pointer" onclick="toggleJobDetail(1)">
+          <text x="782" y="251" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="14" fill="#8A8A8A">&#10005;</text>
+        </g>
       </g>
-      <rect x="20" y="460" width="240" height="4" rx="2" fill="#2D7A4F"/>
-      <circle cx="44" cy="488" r="8" fill="#2D7A4F" opacity="0.15"/>
-      <text x="44" y="492" text-anchor="middle" font-size="11" fill="#2D7A4F" font-weight="700">&#10003;</text>
-      <text x="62" y="484" font-family="JetBrains Mono,monospace" font-size="10" fill="#2D7A4F" font-weight="700" letter-spacing="1">AUTO-MERGE</text>
-      <text x="62" y="500" font-size="11" fill="#6B6B6B">Squash merge, risk:low</text>
 
-      <!-- Needs review -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="275" y="460" width="240" height="52" rx="8" fill="white" stroke="#9A7B2D" stroke-width="1.5"/>
+      <!-- JOB 2 DETAIL: VALIDATE -->
+      <g id="job2-detail" visibility="hidden">
+        <g filter="url(#pipe-shadow)">
+          <rect x="20" y="228" width="780" height="90" rx="8" fill="white" stroke="#B87333" stroke-width="1.5"/>
+        </g>
+        <rect x="20" y="228" width="780" height="4" rx="2" fill="#B87333"/>
+        <text x="40" y="251" font-family="JetBrains Mono,monospace" font-size="10" fill="#B87333" letter-spacing="1.5" font-weight="700">JOB 2: DETERMINISTIC VALIDATION</text>
+
+        <rect x="36" y="261" width="44" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+        <text x="58" y="275" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">fmt</text>
+        <text x="88" y="275" font-size="12" fill="#8A8A8A">&#8594;</text>
+        <rect x="98" y="261" width="44" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+        <text x="120" y="275" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">init</text>
+        <text x="150" y="275" font-size="12" fill="#8A8A8A">&#8594;</text>
+        <rect x="160" y="261" width="64" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+        <text x="192" y="275" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">validate</text>
+        <text x="232" y="275" font-size="12" fill="#8A8A8A">&#8594;</text>
+        <rect x="242" y="261" width="50" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+        <text x="267" y="275" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">tflint</text>
+        <text x="300" y="275" font-size="12" fill="#8A8A8A">&#8594;</text>
+        <rect x="310" y="261" width="90" height="20" rx="4" fill="#B87333" opacity="0.1"/>
+        <text x="355" y="275" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="700">plan -detailed</text>
+
+        <text x="36" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">exit 0: comment + close PR</text>
+        <text x="220" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A">exit 1: label breaking</text>
+        <text x="410" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F">exit 2: continue to Job 3</text>
+        <g style="cursor:pointer" onclick="toggleJobDetail(2)">
+          <text x="782" y="251" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="14" fill="#8A8A8A">&#10005;</text>
+        </g>
       </g>
-      <rect x="275" y="460" width="240" height="4" rx="2" fill="#9A7B2D"/>
-      <circle cx="299" cy="488" r="8" fill="#9A7B2D" opacity="0.15"/>
-      <text x="299" y="492" text-anchor="middle" font-size="11" fill="#9A7B2D" font-weight="700">!</text>
-      <text x="317" y="484" font-family="JetBrains Mono,monospace" font-size="10" fill="#9A7B2D" font-weight="700" letter-spacing="1">NEEDS-REVIEW</text>
-      <text x="317" y="500" font-size="11" fill="#6B6B6B">Label + "@claude for help"</text>
 
-      <!-- Breaking change -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="530" y="460" width="270" height="52" rx="8" fill="white" stroke="#C4283A" stroke-width="1.5"/>
+      <!-- JOB 3 DETAIL: AI ANALYSIS -->
+      <g id="job3-detail" visibility="hidden">
+        <g filter="url(#pipe-shadow)">
+          <rect x="20" y="228" width="780" height="155" rx="8" fill="white" stroke="#6B3FA0" stroke-width="1.5"/>
+        </g>
+        <rect x="20" y="228" width="780" height="4" rx="2" fill="#6B3FA0"/>
+        <text x="40" y="251" font-family="JetBrains Mono,monospace" font-size="10" fill="#6B3FA0" letter-spacing="1.5" font-weight="700">JOB 3: claude-code-action + TERRAFORM MCP SERVER</text>
+        <text x="680" y="251" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">--json-schema</text>
+
+        <g filter="url(#pipe-shadow)">
+          <rect x="30" y="263" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+        </g>
+        <text x="95" y="281" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5A: INTERFACE DIFF</text>
+        <text x="95" y="297" text-anchor="middle" font-size="10" fill="#6B6B6B">old vs new inputs/outputs</text>
+        <text x="95" y="309" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D">MCP: module_details</text>
+
+        <g filter="url(#pipe-shadow)">
+          <rect x="170" y="263" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+        </g>
+        <text x="235" y="281" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5B: ADAPT CONFIG</text>
+        <text x="235" y="297" text-anchor="middle" font-size="10" fill="#6B6B6B">fix code, push to PR</text>
+        <text x="235" y="309" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#1A6B7A">contents: write</text>
+
+        <g filter="url(#pipe-shadow)">
+          <rect x="310" y="263" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+        </g>
+        <text x="375" y="281" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5C: SECURITY</text>
+        <text x="375" y="297" text-anchor="middle" font-size="10" fill="#6B6B6B">IAM, encryption, exposure</text>
+        <text x="375" y="309" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">severity rating</text>
+
+        <g filter="url(#pipe-shadow)">
+          <rect x="450" y="263" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+        </g>
+        <text x="515" y="281" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5D: PLAN ANALYSIS</text>
+        <text x="515" y="297" text-anchor="middle" font-size="10" fill="#6B6B6B">add/change/destroy</text>
+        <text x="515" y="309" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#B87333">blast radius</text>
+
+        <g filter="url(#pipe-shadow)">
+          <rect x="590" y="263" width="200" height="52" rx="6" fill="#6B3FA0" opacity="0.06" stroke="#6B3FA0" stroke-width="1.5"/>
+        </g>
+        <text x="690" y="281" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5E: RECOMMENDATION</text>
+        <text x="690" y="297" text-anchor="middle" font-size="10" fill="#3D3D3D">Decision Matrix &#8594; JSON</text>
+        <text x="690" y="309" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">structured_output</text>
+
+        <!-- Animated particles from 5A-5D to 5E -->
+        <circle r="3" fill="#6B3FA0" opacity="0">
+          <animateMotion dur="2.5s" repeatCount="indefinite" begin="0s" path="M95,315 L95,327 L690,327 L690,315"/>
+          <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0s" keyTimes="0;0.1;0.85;1"/>
+        </circle>
+        <circle r="3" fill="#6B3FA0" opacity="0">
+          <animateMotion dur="2.5s" repeatCount="indefinite" begin="0.6s" path="M235,315 L235,327 L690,327 L690,315"/>
+          <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0.6s" keyTimes="0;0.1;0.85;1"/>
+        </circle>
+        <circle r="3" fill="#6B3FA0" opacity="0">
+          <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.2s" path="M375,315 L375,327 L690,327 L690,315"/>
+          <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.2s" keyTimes="0;0.1;0.85;1"/>
+        </circle>
+        <circle r="3" fill="#6B3FA0" opacity="0">
+          <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.8s" path="M515,315 L515,327 L690,327 L690,315"/>
+          <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.8s" keyTimes="0;0.1;0.85;1"/>
+        </circle>
+
+        <text x="36" y="340" font-family="JetBrains Mono,monospace" font-size="9" fill="#6B3FA0" opacity="0.7">5A-5D feed into 5E &#8594; structured JSON recommendation &#8594; Job 4 Decision</text>
+
+        <!-- Revalidation note (was standalone, now in Job 3 context) -->
+        <rect x="30" y="350" width="760" height="24" rx="4" fill="#6B3FA0" opacity="0.04" stroke="#6B3FA0" stroke-width="0.5" stroke-dasharray="4 3"/>
+        <text x="410" y="366" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" opacity="0.8">IF 5B PUSHES ADAPTATIONS &#8594; NEEDS-REVALIDATION &#8594; git synchronize RE-TRIGGERS JOBS 1-4 (two-pass safety)</text>
+        <g style="cursor:pointer" onclick="toggleJobDetail(3)">
+          <text x="782" y="251" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="14" fill="#8A8A8A">&#10005;</text>
+        </g>
       </g>
-      <rect x="530" y="460" width="270" height="4" rx="2" fill="#C4283A"/>
-      <circle cx="554" cy="488" r="8" fill="#C4283A" opacity="0.15"/>
-      <text x="554" y="492" text-anchor="middle" font-size="11" fill="#C4283A" font-weight="700">&#10007;</text>
-      <text x="572" y="484" font-family="JetBrains Mono,monospace" font-size="10" fill="#C4283A" font-weight="700" letter-spacing="1">BREAKING-CHANGE</text>
-      <text x="572" y="500" font-size="11" fill="#6B6B6B">Block merge + detailed analysis</text>
-
-      <!-- Arrows from decision zone to outcomes -->
-      <path d="M640,445 C640,452 140,455 140,460" fill="none" stroke="#2D7A4F" stroke-width="1.5" opacity="0.3"/>
-      <path d="M690,445 C690,452 395,455 395,460" fill="none" stroke="#9A7B2D" stroke-width="1.5" opacity="0.3"/>
-      <path d="M740,445 C740,452 665,455 665,460" fill="none" stroke="#C4283A" stroke-width="1.5" opacity="0.3"/>
-
-      <!-- Animated decision particles (sequential: green first, then yellow, then red) -->
-      <circle r="3" fill="#2D7A4F" opacity="0">
-        <animateMotion dur="8s" repeatCount="indefinite" begin="0s" path="M640,445 C640,452 140,455 140,460"/>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0s"/>
-      </circle>
-      <circle r="3" fill="#9A7B2D" opacity="0">
-        <animateMotion dur="8s" repeatCount="indefinite" begin="2.5s" path="M690,445 C690,452 395,455 395,460"/>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="2.5s"/>
-      </circle>
-      <circle r="3" fill="#C4283A" opacity="0">
-        <animateMotion dur="8s" repeatCount="indefinite" begin="5s" path="M740,445 C740,452 665,455 665,460"/>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="5s"/>
-      </circle>
 
       <!-- ============================================ -->
-      <!-- === ESCALATION LOOP ======================== -->
+      <!-- === BELOW-JOBS GROUP (shifts down on expand) -->
       <!-- ============================================ -->
-      <!-- Curved arrow from NEEDS-REVIEW back up to @claude trigger (Path B) -->
-      <path d="M515,486 C530,486 810,486 810,310 C810,110 610,80 610,80" fill="none" stroke="#6B3FA0" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.35"/>
-      <polygon points="614,76 606,80 614,84" fill="#6B3FA0" opacity="0.5"/>
-      <text x="814" y="300" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" opacity="0.6" transform="rotate(-90,814,300)">@claude escalation</text>
+      <g id="below-jobs">
+        <!-- Arrow from Job 4 down to Decision Outcomes -->
+        <line x1="725" y1="220" x2="725" y2="250" stroke="#C0BDB5" stroke-width="1.5" stroke-dasharray="4 3"/>
 
-      <!-- Animated escalation particle -->
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="5s" repeatCount="indefinite" path="M515,486 C530,486 810,486 810,310 C810,110 610,80 610,80"/>
-        <animate attributeName="opacity" values="0;0.6;0.6;0" dur="5s" repeatCount="indefinite" keyTimes="0;0.1;0.85;1"/>
-      </circle>
+        <!-- Auto-merge -->
+        <g filter="url(#pipe-shadow)">
+          <rect x="20" y="265" width="240" height="52" rx="8" fill="white" stroke="#2D7A4F" stroke-width="1.5"/>
+        </g>
+        <rect x="20" y="265" width="240" height="4" rx="2" fill="#2D7A4F"/>
+        <circle cx="44" cy="293" r="8" fill="#2D7A4F" opacity="0.15"/>
+        <text x="44" y="297" text-anchor="middle" font-size="11" fill="#2D7A4F" font-weight="700">&#10003;</text>
+        <text x="62" y="289" font-family="JetBrains Mono,monospace" font-size="10" fill="#2D7A4F" font-weight="700" letter-spacing="1">AUTO-MERGE</text>
+        <text x="62" y="305" font-size="11" fill="#6B6B6B">Squash merge, risk:low</text>
 
-      <!-- ============================================ -->
-      <!-- === TWO-PASS REVALIDATION NOTE ============= -->
-      <!-- ============================================ -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="535" width="780" height="36" rx="6" fill="white" stroke="#6B3FA0" stroke-width="1" stroke-dasharray="4 3"/>
+        <!-- Needs review -->
+        <g filter="url(#pipe-shadow)">
+          <rect x="275" y="265" width="240" height="52" rx="8" fill="white" stroke="#9A7B2D" stroke-width="1.5"/>
+        </g>
+        <rect x="275" y="265" width="240" height="4" rx="2" fill="#9A7B2D"/>
+        <circle cx="299" cy="293" r="8" fill="#9A7B2D" opacity="0.15"/>
+        <text x="299" y="297" text-anchor="middle" font-size="11" fill="#9A7B2D" font-weight="700">!</text>
+        <text x="317" y="289" font-family="JetBrains Mono,monospace" font-size="10" fill="#9A7B2D" font-weight="700" letter-spacing="1">NEEDS-REVIEW</text>
+        <text x="317" y="305" font-size="11" fill="#6B6B6B">Label + "@claude for help"</text>
+
+        <!-- Breaking change -->
+        <g filter="url(#pipe-shadow)">
+          <rect x="530" y="265" width="270" height="52" rx="8" fill="white" stroke="#C4283A" stroke-width="1.5"/>
+        </g>
+        <rect x="530" y="265" width="270" height="4" rx="2" fill="#C4283A"/>
+        <circle cx="554" cy="293" r="8" fill="#C4283A" opacity="0.15"/>
+        <text x="554" y="297" text-anchor="middle" font-size="11" fill="#C4283A" font-weight="700">&#10007;</text>
+        <text x="572" y="289" font-family="JetBrains Mono,monospace" font-size="10" fill="#C4283A" font-weight="700" letter-spacing="1">BREAKING-CHANGE</text>
+        <text x="572" y="305" font-size="11" fill="#6B6B6B">Block merge + detailed analysis</text>
+
+        <!-- Arrows from Job 4 down to outcomes -->
+        <path d="M680,250 C680,257 140,260 140,265" fill="none" stroke="#2D7A4F" stroke-width="1.5" opacity="0.3"/>
+        <path d="M725,250 C725,257 395,260 395,265" fill="none" stroke="#9A7B2D" stroke-width="1.5" opacity="0.3"/>
+        <path d="M770,250 C770,257 665,260 665,265" fill="none" stroke="#C4283A" stroke-width="1.5" opacity="0.3"/>
+
+        <!-- Animated decision particles -->
+        <circle r="3" fill="#2D7A4F" opacity="0">
+          <animateMotion dur="8s" repeatCount="indefinite" begin="0s" path="M680,250 C680,257 140,260 140,265"/>
+          <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0s"/>
+        </circle>
+        <circle r="3" fill="#9A7B2D" opacity="0">
+          <animateMotion dur="8s" repeatCount="indefinite" begin="2.5s" path="M725,250 C725,257 395,260 395,265"/>
+          <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="2.5s"/>
+        </circle>
+        <circle r="3" fill="#C4283A" opacity="0">
+          <animateMotion dur="8s" repeatCount="indefinite" begin="5s" path="M770,250 C770,257 665,260 665,265"/>
+          <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="5s"/>
+        </circle>
+
+        <!-- Post-merge apply -->
+        <g filter="url(#pipe-shadow)">
+          <rect x="20" y="340" width="780" height="80" rx="8" fill="white" stroke="#2D7A4F" stroke-width="1.5"/>
+        </g>
+        <rect x="20" y="340" width="780" height="4" rx="2" fill="#2D7A4F"/>
+        <text x="40" y="364" font-family="JetBrains Mono,monospace" font-size="10" fill="#2D7A4F" letter-spacing="1.5" font-weight="700">ON MERGE: terraform-consumer-uplift-apply.yml</text>
+        <rect x="35" y="374" width="340" height="20" rx="4" fill="#2D7A4F" opacity="0.06" stroke="#2D7A4F" stroke-width="0.5"/>
+        <text x="45" y="388" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F" font-weight="600">SUCCESS: upload config &#8594; create run &#8594; apply &#8594; comment</text>
+        <rect x="395" y="374" width="390" height="20" rx="4" fill="#C4283A" opacity="0.06" stroke="#C4283A" stroke-width="0.5"/>
+        <text x="405" y="388" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A" font-weight="600">FAILURE: incident issue + draft rollback PR + notify CODEOWNERS</text>
+        <text x="40" y="412" font-family="Source Sans 3,sans-serif" font-size="11" fill="#8A8A8A">Rollback PR goes through the normal pipeline for safe revert (see Decision D6)</text>
       </g>
-      <text x="410" y="557" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#6B3FA0" letter-spacing="1">IF ADAPTATIONS PUSHED (5B) &rarr; NEEDS-REVALIDATION &rarr; synchronize RE-TRIGGERS JOBS 1-4</text>
 
-      <!-- ============================================ -->
-      <!-- === POST-MERGE APPLY ======================= -->
-      <!-- ============================================ -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="590" width="780" height="80" rx="8" fill="white" stroke="#2D7A4F" stroke-width="1.5"/>
-      </g>
-      <rect x="20" y="590" width="780" height="4" rx="2" fill="#2D7A4F"/>
-      <text x="40" y="614" font-family="JetBrains Mono,monospace" font-size="10" fill="#2D7A4F" letter-spacing="1.5" font-weight="700">ON MERGE: terraform-consumer-uplift-apply.yml</text>
-
-      <!-- Success path -->
-      <rect x="35" y="624" width="340" height="20" rx="4" fill="#2D7A4F" opacity="0.06" stroke="#2D7A4F" stroke-width="0.5"/>
-      <text x="45" y="638" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F" font-weight="600">SUCCESS: upload config &rarr; create run &rarr; apply &rarr; comment</text>
-
-      <!-- Failure path -->
-      <rect x="395" y="624" width="390" height="20" rx="4" fill="#C4283A" opacity="0.06" stroke="#C4283A" stroke-width="0.5"/>
-      <text x="405" y="638" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A" font-weight="600">FAILURE: incident issue + draft rollback PR + notify CODEOWNERS</text>
-      <text x="40" y="662" font-family="Source Sans 3,sans-serif" font-size="11" fill="#8A8A8A">Rollback PR goes through the normal pipeline for safe revert (see Decision D6)</text>
-
-      <!-- ============================================ -->
-      <!-- === COPILOT BADGE ========================== -->
-      <!-- ============================================ -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="690" width="780" height="40" rx="6" fill="white" stroke="#E0DCD4" stroke-width="1"/>
-      </g>
-      <text x="40" y="714" font-family="JetBrains Mono,monospace" font-size="9" fill="#4A6B8A" font-weight="700" letter-spacing="1">COMPLEMENTARY: GITHUB COPILOT CODE REVIEW</text>
-      <text x="380" y="714" font-family="Source Sans 3,sans-serif" font-size="11" fill="#8A8A8A">Passive review via repo rulesets (independent, no workflow config needed)</text>
     </svg>
+
   </div>
 
   <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4A6B8A"></div> Dependabot</div>
     <div class="legend-item"><div class="legend-dot" style="background:#1A6B7A"></div> Classify</div>
     <div class="legend-item"><div class="legend-dot" style="background:#B87333"></div> Validate</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#6B3FA0"></div> AI Analysis + @claude</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6B3FA0"></div> AI Analysis</div>
     <div class="legend-item"><div class="legend-dot" style="background:#C4283A"></div> Decision</div>
     <div class="legend-item"><div class="legend-dot" style="background:#2D7A4F"></div> Apply</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#4A6B8A"></div> Copilot (passive)</div>
   </div>
+  <p style="font-size:12px; color:#8A8A8A; text-align:center; margin-top:8px; font-style:italic">Click on Jobs 1, 2, or 3 to expand details</p>
 </div>
 
 <!-- ===== ESCALATION FLOW ===== -->
@@ -867,6 +883,35 @@ body {
 </div>
 
 <script>
+// Toggle job detail panels - pushes content below down
+const detailHeights = { 1: 75, 2: 100, 3: 165 };
+function toggleJobDetail(n) {
+  const svg = document.getElementById('pipeline-svg');
+  const belowGroup = document.getElementById('below-jobs');
+  const bgFill = document.getElementById('bg-fill');
+  const bgGrid = document.getElementById('bg-grid');
+  const bgBorder = document.getElementById('bg-border');
+  const baseHeight = 450;
+  let openHeight = 0;
+
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('job' + i + '-detail');
+    if (!el) continue;
+    if (i === n) {
+      const wasHidden = el.getAttribute('visibility') === 'hidden';
+      el.setAttribute('visibility', wasHidden ? 'visible' : 'hidden');
+      if (wasHidden) openHeight = detailHeights[i];
+    } else {
+      el.setAttribute('visibility', 'hidden');
+    }
+  }
+
+  const newHeight = baseHeight + openHeight;
+  svg.setAttribute('viewBox', '0 0 820 ' + newHeight);
+  [bgFill, bgGrid, bgBorder].forEach(r => r.setAttribute('height', newHeight));
+  belowGroup.style.transform = openHeight ? 'translate(0,' + openHeight + 'px)' : '';
+}
+
 // Reveal on scroll
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
