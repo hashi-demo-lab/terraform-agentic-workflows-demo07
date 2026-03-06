@@ -1,4 +1,4 @@
-# Consumer Module Uplift — Implementation Plan
+# Consumer Module Uplift -- Implementation Plan
 
 **Branch**: feat/consumer-module-uplift
 **Date**: 2026-03-06
@@ -9,7 +9,7 @@
 
 ## 1. Problem Statement
 
-When a module author publishes a new version to the HCP Terraform private registry, **consumers** of that module must update their workspace code. The change scope ranges from trivial (bump a version constraint) to complex (new required variables, removed outputs, restructured interfaces). Existing tools like Dependabot can detect new versions but provide **zero semantic understanding** of what changed — especially for private registry modules which lack changelogs.
+When a module author publishes a new version to the HCP Terraform private registry, **consumers** of that module must update their workspace code. The change scope ranges from trivial (bump a version constraint) to complex (new required variables, removed outputs, restructured interfaces). Existing tools like Dependabot can detect new versions but provide **zero semantic understanding** of what changed -- especially for private registry modules which lack changelogs.
 
 The automation gap: no tool today reads the module interface diff, maps breaking changes to consumer code, rewrites HCL, and validates the result. This is precisely the gap an agentic workflow can fill.
 
@@ -20,12 +20,14 @@ The automation gap: no tool today reads the module interface diff, maps breaking
 **In scope (Use Case 1 only)**:
 - Consumer-side module version upgrades (workspace code that calls private registry modules)
 - Detection via Dependabot + fallback scanner
-- AI-powered analysis of module interface changes
-- Automated code adaptation where possible
+- AI-powered analysis and code adaptation via `claude-code-action`
 - Risk-based decision framework (auto-merge / needs-review / breaking-change)
-- CI pipeline via GitHub Actions with HCP Terraform integration
+- Interactive `@claude` follow-up on PRs for complex upgrades
+- Optional Copilot code review as complementary passive reviewer
+- Post-merge apply to HCP Terraform
+- Module update tracker dashboard
 
-**Out of scope (Use Case 2 — separate issue)**:
+**Out of scope (Use Case 2 -- separate issue)**:
 - Producer-side module uplift (upgrading the module itself)
 - Provider version upgrades within modules
 - Breaking change detection for module authors
@@ -35,63 +37,86 @@ The automation gap: no tool today reads the module interface diff, maps breaking
 
 ## 3. Architecture Overview
 
-### Two Execution Modes
+### Single Connected Pipeline
 
-The consumer uplift workflow operates in **two complementary modes**:
-
-| Mode | Trigger | Runtime | Agent Model |
-|------|---------|---------|-------------|
-| **Interactive** (`/tf-consumer-uplift`) | User invokes CLI skill | Claude Code (Opus) | Full SDD 4-phase with human gates |
-| **CI Pipeline** (GitHub Actions) | Dependabot PR / cron scan | claude-code-action (Sonnet) | Automated 4-job pipeline with decision matrix |
-
-Both modes share the same analysis logic and decision matrix, but differ in execution context:
-
-- **Interactive mode** follows SDD conventions: research agents, design document, human approval gate, implementation agents
-- **CI mode** runs as a GitHub Actions workflow: classify, validate, analyze, decide — optimized for automated PRs
-
-### Alignment with SDD Framework
-
-The interactive workflow maps to the existing SDD 4-phase structure:
+The consumer uplift workflow operates as a **unified GitHub Actions pipeline** with two trigger modes in a single workflow file. There is no separate CLI skill -- the entire workflow lives in CI with interactive escalation built in.
 
 ```
-Phase 1: DETECT & ANALYZE (Clarify)
-  ├── Identify module version bump (source: Dependabot PR, manual input, or scan)
-  ├── tf-consumer-uplift-analyzer agents (parallel, foreground)
-  │   ├── Module interface diff (MCP: get_private_module_details old vs new)
-  │   ├── Consumer code impact scan (grep module references, trace outputs)
-  │   └── Security review (IAM, encryption, exposure changes)
-  └── Collect findings → structured impact report
-
-Phase 2: PLAN ADAPTATION (Design)
-  ├── tf-consumer-uplift-planner agent
-  │   ├── Reads impact report + current consumer code
-  │   ├── Produces consumer-uplift-design.md (new template)
-  │   └── Includes: interface diff, required changes, risk assessment
-  └── Human approval gate (approve / request changes)
-
-Phase 3: EXECUTE ADAPTATION (Implement)
-  ├── tf-consumer-developer agent (reused, with UPLIFT arguments)
-  │   ├── Update module version constraint
-  │   ├── Add/modify variables for new required inputs
-  │   ├── Update references to changed/removed outputs
-  │   └── terraform init -upgrade, validate
-  └── Checkpoint commit
-
-Phase 4: VALIDATE & DECIDE (Validate)
-  ├── tf-consumer-validator agent (reused, with uplift instructions)
-  │   ├── terraform plan review (expected vs unexpected changes)
-  │   ├── Security review of new resources/permissions
-  │   ├── Risk classification (low/medium/high/critical)
-  │   └── Quality scoring
-  ├── Sandbox deployment (optional, orchestrator-controlled)
-  └── PR creation with analysis summary
+Dependabot PR / Fallback Scanner PR
+       |
+       v
+┌──────────────────────────────────────────────────┐
+│  terraform-consumer-uplift.yml (auto-trigger)    │
+│                                                  │
+│  Job 1: CLASSIFY                                 │
+│    Parse git diff, detect semver type            │
+│    (patch / minor / major)                       │
+│                                                  │
+│  Job 2: VALIDATE                                 │
+│    terraform fmt, init, validate, tflint, plan   │
+│    Exit 0 → close PR (already current)           │
+│    Exit 1 → label breaking, block                │
+│    Exit 2 → upload plan artifact, continue       │
+│                                                  │
+│  Job 3: AI ANALYSIS (claude-code-action)         │
+│    ├── MCP: get_private_module_details (old/new) │
+│    ├── 5A: Interface diff                        │
+│    ├── 5B: Config adaptation (push fixes)        │
+│    ├── 5C: Security review                       │
+│    ├── 5D: Plan analysis                         │
+│    ├── 5E: Recommendation engine                 │
+│    └── --json-schema → structured output         │
+│                                                  │
+│  Job 4: DECISION                                 │
+│    ├── risk:low → auto-merge (squash)            │
+│    ├── risk:medium → label + request review      │
+│    └── risk:high/critical → block + analysis     │
+└──────────────────────────────────────────────────┘
+       |
+       v  (if human review needed)
+┌──────────────────────────────────────────────────┐
+│  Same workflow, issue_comment trigger            │
+│  @claude mention on PR for interactive follow-up │
+│    ├── Deep analysis with full MCP access        │
+│    ├── Can make code changes + push              │
+│    ├── Can re-run interface diff                 │
+│    └── Responds as PR comment                    │
+└──────────────────────────────────────────────────┘
+       |
+       v  (on merge to main)
+┌──────────────────────────────────────────────────┐
+│  terraform-consumer-uplift-apply.yml             │
+│  Upload config → POST /api/v2/runs               │
+│  Poll completion → comment results on PR         │
+└──────────────────────────────────────────────────┘
 ```
+
+### Why No Separate CLI Skill
+
+The original plan had two independent modes (CI pipeline + interactive CLI skill). This created duplication and a disconnect. The connected architecture eliminates both problems:
+
+| Concern | How It's Solved |
+|---------|----------------|
+| **Automated routine patches** | Jobs 1-4 run on every Dependabot PR |
+| **Complex upgrades needing human judgment** | `@claude` mention on blocked/review-needed PRs |
+| **Code adaptation** | claude-code-action pushes fixes directly to PR branch |
+| **Deep follow-up analysis** | Interactive mode in same workflow, full MCP access |
+| **No logic duplication** | Single agent prompt, single decision matrix, one place to maintain |
+
+### Complementary Reviewers
+
+| Tool | Role | Trigger |
+|------|------|---------|
+| **claude-code-action** | Active: analyze, adapt code, decide, merge | `pull_request` + `issue_comment` |
+| **GitHub Copilot** | Passive: general code quality review | Repo ruleset (auto-review on PR) |
+
+Copilot runs independently via repository rulesets (Settings > Rulesets), not a workflow YAML. It provides broad code quality feedback while Claude handles the Terraform-specific uplift analysis.
 
 ---
 
 ## 4. Decision Matrix
 
-Risk classification drives the automated decision for CI mode, and informs the human reviewer in interactive mode.
+Risk classification drives the automated decision. The matrix is embedded in the agent prompt and enforced by structured JSON output.
 
 ```
                       PATCH           MINOR           MAJOR
@@ -127,107 +152,217 @@ Security finding      NEEDS-REVIEW    NEEDS-REVIEW    BREAKING-CHANGE
 
 ## 5. Artifacts to Create
 
-### 5.1 New Skill (Interactive Mode)
+### 5.1 GitHub Actions Workflows
 
 | File | Purpose |
 |------|---------|
-| `.claude/skills/tf-consumer-uplift/SKILL.md` | Orchestrator skill — 4-phase consumer uplift workflow |
+| `.github/workflows/terraform-consumer-uplift.yml` | Unified workflow: classify, validate, AI analysis, decision + @claude interactive |
+| `.github/workflows/terraform-consumer-uplift-apply.yml` | Post-merge apply to HCP Terraform + rollback on failure |
+| `.github/workflows/module-update-tracker.yml` | *(Phase D — optional)* Self-updating dashboard issue aggregating pending upgrades |
 
-The skill follows the same patterns as `/tf-consumer-plan` but adapted for uplift:
-- Phase 1 uses uplift-specific research agents (module diff, not module discovery)
-- Phase 2 produces `consumer-uplift-design.md` (not `consumer-design.md`)
-- Phase 3 reuses `tf-consumer-developer` with uplift-mode arguments
-- Phase 4 reuses `tf-consumer-validator` with uplift-specific instructions
+**Key workflow design:**
+- Single file combines `pull_request` (automation) and `issue_comment` (interactive) triggers
+- Jobs 1-4 use `if: github.event_name == 'pull_request'`
+- Interactive job uses `if: contains(github.event.comment.body, '@claude')`
+- Structured output (`--json-schema`) bridges AI analysis to deterministic decision steps
+- claude-code-action can push code changes directly to the PR branch (`contents: write`)
+- Concurrency groups per-branch prevent race conditions
 
-### 5.2 New Agents
-
-| File | Purpose | Model |
-|------|---------|-------|
-| `.claude/agents/tf-consumer-uplift-analyzer.md` | Analyze module version diff, classify changes, assess risk | Opus |
-
-**tf-consumer-uplift-analyzer** — one instance per analysis dimension:
-- **Interface diff**: Uses MCP `get_private_module_details` for old and new versions, compares inputs/outputs
-- **Consumer impact**: Scans consumer `.tf` files for references to changed/removed outputs
-- **Security review**: Assesses IAM, encryption, and exposure changes in the new version
-
-The planner role is handled by `tf-consumer-design` agent (reused) with uplift-specific arguments — no need for a separate planner agent.
-
-### 5.3 New Design Template
+### 5.2 CI Agent Definition
 
 | File | Purpose |
 |------|---------|
-| `.foundations/templates/consumer-uplift-design-template.md` | Design document template for uplift scenarios |
+| `.github/agents/module-upgrade-analyst.md` | Claude Code Action agent prompt for automated analysis |
 
-Template sections:
-1. **Uplift Summary** — current version, target version, semver type, trigger source
-2. **Interface Diff** — added/removed/changed variables and outputs (tables)
-3. **Consumer Impact** — which files need changes, what references break
-4. **Risk Assessment** — decision matrix result, security findings, plan summary
-5. **Adaptation Checklist** — ordered steps to adapt consumer code
-6. **Open Questions** — deferred decisions
-
-### 5.4 GitHub Actions Workflows (CI Mode)
-
-| File | Purpose |
-|------|---------|
-| `.github/workflows/terraform-consumer-uplift.yml` | Main 4-job pipeline: classify, validate, analyze, decide |
-| `.github/workflows/terraform-consumer-uplift-apply.yml` | Post-merge apply to HCP Terraform |
-
-Adapted from the external repo's workflows with these changes:
-- **Organization-agnostic**: Use env vars for TFC org/workspace, not hardcoded values
-- **Configurable model**: Default to Sonnet for CI cost efficiency, but allow override
-- **MCP via npx**: Use `npx @anthropic-ai/terraform-mcp-server` (not Docker) for CI
-- **Concurrency groups**: Per-branch to prevent race conditions
-- **Squash merge only**: Single commit per upgrade for clean reverts
-
-### 5.5 CI Agent Definition
-
-| File | Purpose |
-|------|---------|
-| `.github/agents/module-upgrade-analyst.md` | Claude Code Action agent prompt for CI analysis |
-
-Adapted from the external repo's agent with SDD alignment:
-- 5 sub-analyses: interface diff, config adaptation, security review, plan analysis, recommendation
-- Uses Terraform MCP tools for registry queries
-- Outputs structured JSON recommendation
+The agent prompt defines the 5 sub-analyses and decision matrix. It's loaded by the workflow via `claude_args`. Key features:
+- Uses Terraform MCP tools (`get_private_module_details`, `search_private_modules`)
+- Structured JSON output via `--json-schema` for programmatic decision-making
+- Can make code changes (add variables, fix output references, update version constraints)
 - Conservative bias: `needs-review` over `auto-merge` when uncertain
+- Maximum 15 turns to control cost
 
-### 5.6 Supporting Scripts
-
-| File | Purpose |
-|------|---------|
-| `.foundations/scripts/bash/classify-version-bump.sh` | Parse git diff to classify semver bump type |
-| `.foundations/scripts/bash/scan-module-versions.sh` | TFC API scanner for module version detection (Dependabot fallback) |
-
-### 5.7 Configuration Files
+### 5.3 Supporting Scripts
 
 | File | Purpose |
 |------|---------|
-| `.github/dependabot.yml` | Private registry module scanning config |
-| `.mcp-ci.json` | MCP server config for CI (npx, no Docker) — already partially exists |
+| `.foundations/scripts/bash/classify-version-bump.sh` | Parse git diff to classify semver bump type (patch/minor/major) |
+| `.foundations/scripts/bash/scan-module-versions.sh` | TFC API fallback scanner for module version detection |
 
-### 5.8 Diagram
+**classify-version-bump.sh**: Extracts old/new version constraints from `git diff`, computes semver delta, outputs JSON with module name, old version, new version, and bump type.
+
+**scan-module-versions.sh**: Queries `GET /api/v2/organizations/{org}/registry-modules` to discover new module versions. Covers edge cases Dependabot misses (submodule paths like `cloudwatch//modules/metric-alarm`). Creates branches and PRs in the same format as Dependabot for pipeline compatibility.
+
+### 5.4 Configuration Files
 
 | File | Purpose |
 |------|---------|
-| `.foundations/design/consumer-uplift-workflow.html` | Interactive visual diagram of the consumer uplift workflow |
+| `.github/dependabot.yml` | Private registry module scanning (daily schedule) |
+| `.mcp-ci.json` | MCP server config for CI (`npx`, no Docker) |
+
+**Dependabot config:**
+```yaml
+version: 2
+registries:
+  terraform-private:
+    type: terraform-registry
+    url: https://app.terraform.io
+    token: ${{ secrets.TFE_TOKEN_DEPENDABOT }}
+updates:
+  - package-ecosystem: terraform
+    directory: "/"
+    schedule:
+      interval: daily
+    registries:
+      - terraform-private
+```
+
+**MCP CI config** (npx for faster cold start, no Docker dependency):
+```json
+{
+  "mcpServers": {
+    "terraform": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/terraform-mcp-server@latest", "--toolsets=all"],
+      "env": { "TFE_TOKEN": "${TFE_TOKEN}" }
+    }
+  }
+}
+```
+
+### 5.5 Diagram
+
+| File | Purpose |
+|------|---------|
+| `.foundations/design/consumer-uplift-workflow.html` | Interactive visual diagram of the connected pipeline |
 
 ---
 
-## 6. Integration Points
+## 6. Workflow Detail
+
+### Job 1: Classify
+
+Parses the git diff to extract old/new version constraints and determine semver bump type. Uses `classify-version-bump.sh`. Detects whether the PR is from Dependabot or the fallback scanner.
+
+**Outputs**: `version_type` (patch/minor/major), `modules_changed` (JSON array), `is_dependabot` (boolean)
+
+### Job 2: Validate
+
+Runs deterministic Terraform validation. This is the gate that determines whether AI analysis is needed.
+
+| Step | Tool | Gate |
+|------|------|------|
+| Format check | `terraform fmt -check` | Block on failure |
+| Init | `terraform init` (with TFE_TOKEN) | Block on failure |
+| Validate | `terraform validate` | Block on failure |
+| Lint | `tflint` | Block on failure |
+| Plan | `terraform plan -detailed-exitcode` | Exit 0: close PR, Exit 1: label breaking, Exit 2: continue |
+
+**Prerequisite**: `hashicorp/setup-terraform` must use `terraform_wrapper: false` — the default wrapper converts exit code 2 to 1 (see Decision D7).
+
+**Plan exit code handling:**
+- **Exit 0** (no changes): Post a comment explaining the workspace already reflects this version (e.g., applied via another path), then close the PR. This prevents silent closures and leaves an audit trail.
+- **Exit 1** (error): Label `breaking-change`, block merge, post error details.
+- **Exit 2** (changes detected): Upload plan artifact, continue to Job 3.
+
+**Outputs**: `plan_exitcode`, `resource_changes` (summary)
+
+### Job 3: AI Analysis (claude-code-action)
+
+Only runs if plan exit code is 2 (changes detected). Uses `anthropics/claude-code-action@v1` with:
+- `prompt`: Structured analysis instructions with PR context
+- `--model claude-sonnet-4-6`: Cost-efficient for CI
+- `--mcp-config .mcp-ci.json`: Terraform MCP tools
+- `--json-schema`: Forces structured JSON output for downstream decision
+- `--max-turns 15`: Cost control
+
+**5 Sub-Analyses:**
+
+| Step | What | MCP Tools |
+|------|------|-----------|
+| **5A: Interface Diff** | Compare old vs new module inputs/outputs | `get_private_module_details` |
+| **5B: Config Adaptation** | Add new required inputs, fix removed outputs, push changes | File tools |
+| **5C: Security Review** | IAM, encryption, network exposure changes | `get_private_module_details` |
+| **5D: Plan Analysis** | Parse plan artifact: add/change/destroy/replace counts | File tools |
+| **5E: Recommendation** | Apply decision matrix, produce structured JSON | -- |
+
+**Structured Output Schema:**
+```json
+{
+  "decision": "auto-merge | needs-review | needs-revalidation | breaking-change",
+  "risk_level": "low | medium | high | critical",
+  "version_type": "patch | minor | major",
+  "breaking_changes": [],
+  "security_findings": [],
+  "plan_summary": { "add": 0, "change": 0, "destroy": 0, "replace": 0 },
+  "adaptations_applied": [],
+  "rationale": "Brief explanation"
+}
+```
+
+### Job 4: Decision
+
+Reads the structured JSON output from Job 3 and takes action:
+
+| Decision | Action |
+|----------|--------|
+| `auto-merge` + `risk:low` | Apply labels, squash merge |
+| `needs-revalidation` | Apply labels, post "re-validating after adaptations" comment, wait for re-triggered pipeline |
+| `needs-review` | Apply labels, request reviewer, post analysis comment |
+| `breaking-change` | Apply labels, block merge, post detailed analysis |
+
+PR title is prefixed with emoji + semver tag for visual distinction:
+- `[patch]` Low-risk patch
+- `[minor]` Minor version bump
+- `[MAJOR]` Major version bump (always needs review)
+- `[BREAKING]` Plan failed or cannot adapt
+
+### Interactive Follow-Up (@claude)
+
+When a PR is labeled `needs-review` or `breaking-change`, the decision comment instructs the user to `@claude` on the PR for interactive analysis. The same workflow handles this via the `issue_comment` trigger:
+
+- Full MCP tool access for deeper investigation
+- Can make code changes and push to the PR branch
+- Can re-run interface diff with different parameters
+- Responds as a PR comment with findings
+- Re-triggers the pipeline if code changes are pushed
+
+### Post-Merge Apply
+
+Separate workflow triggered on push to main when `.tf` files change:
+1. Resolve workspace ID via TFC API
+2. Upload configuration tarball
+3. Create run (`POST /api/v2/runs`)
+4. Poll until terminal state (applied/errored)
+5. Confirm run when it reaches confirmable state
+6. Comment results on the merged PR
+
+**On apply failure** (see Decision D6):
+7. Comment error details + TFC run link on the merged PR
+8. Create incident issue (`incident:apply-failure`) with error log, workspace/run IDs, and diff
+9. Auto-generate a draft rollback PR (`git revert`) — this PR goes through the normal pipeline
+10. Tag CODEOWNERS on the incident issue
+
+### Module Update Tracker
+
+Self-updating GitHub issue that aggregates all pending Dependabot PRs:
+- Triggers on PR events (opened, closed, reopened, labeled)
+- Queries all open PRs with `dependabot/terraform/` prefix
+- Builds markdown dashboard: PR number, title, version type, risk level, recommendation, age
+- Closes tracker when no pending PRs; reopens when new ones arrive
+- Pinned issue for visibility
+
+---
+
+## 7. Integration Points
 
 ### With Existing SDD Framework
 
 | Component | Integration |
 |-----------|-------------|
-| **AGENTS.md** | Add `/tf-consumer-uplift` workflow entry to the workflows table |
-| **CLAUDE.md** | Add `/tf-consumer-uplift` to workflow entry points table |
-| **Consumer constitution** | No changes — uplift follows existing consumer code standards |
-| **tf-consumer-developer** | Reused with `UPLIFT MODE` in `$ARGUMENTS` — update version constraints, add/remove variables, fix output references |
-| **tf-consumer-validator** | Reused with uplift-specific instructions — regression focus, plan diff analysis |
-| **validate-env.sh** | No changes — same prerequisites (TFE_TOKEN, gh CLI) |
-| **checkpoint-commit.sh** | Reused for phase checkpoints |
-| **post-issue-progress.sh** | Reused for issue progress updates |
+| **Consumer constitution** | No changes -- uplift produces consumer code, same rules apply |
+| **AGENTS.md** | Add consumer uplift workflow reference |
+| **.mcp-ci.json** | Already exists -- verify or update for CI use |
+| **validate-env.sh** | Not used (CI handles prerequisites) |
 
 ### With HCP Terraform
 
@@ -235,97 +370,167 @@ Adapted from the external repo's agent with SDD alignment:
 |-------------|---------|
 | **Private registry** | MCP `get_private_module_details` for interface diff |
 | **Workspace** | Plan + apply in target workspace |
-| **Variable sets** | Shared credentials for sandbox deployment |
+| **Variable sets** | Shared credentials for provider auth |
 | **Run API** | `POST /api/v2/runs` for post-merge apply |
+| **Registry API** | `GET /api/v2/organizations/{org}/registry-modules` for fallback scanner |
 
 ### With GitHub
 
 | Integration | Details |
 |-------------|---------|
 | **Dependabot** | `terraform-registry` ecosystem for private module detection |
-| **Actions** | 4-job workflow for automated uplift |
-| **PR labels** | Risk classification labels: `risk:low/medium/high/critical` |
-| **PR comments** | Structured analysis summaries |
+| **claude-code-action** | PR-triggered analysis + interactive @claude follow-up |
+| **Copilot** | Optional passive code review via repository rulesets |
+| **PR labels** | `risk:low/medium/high/critical`, `auto-merge`, `needs-review`, `breaking-change` |
+| **PR comments** | Structured analysis summaries with decision rationale |
+| **Tracker issue** | Self-updating dashboard of pending module upgrades |
 
 ---
 
-## 7. Implementation Order
+## 8. Implementation Order
 
-### Phase A: Foundation (skill + agents + template)
+### Phase A: Scripts & Configuration
 
-1. Create `consumer-uplift-design-template.md`
-2. Create `tf-consumer-uplift-analyzer.md` agent
-3. Create `tf-consumer-uplift/SKILL.md` orchestrator skill
-4. Update `AGENTS.md` and `CLAUDE.md` with new workflow
+1. Create `classify-version-bump.sh`
+2. Create `scan-module-versions.sh`
+3. Create/update `.mcp-ci.json` for CI
+4. Create `.github/dependabot.yml`
 
-### Phase B: CI Pipeline (GitHub Actions)
+### Phase B: Workflows & Agent
 
-5. Create `classify-version-bump.sh` script
-6. Create `scan-module-versions.sh` script
-7. Create `module-upgrade-analyst.md` CI agent
-8. Create `terraform-consumer-uplift.yml` workflow
-9. Create `terraform-consumer-uplift-apply.yml` workflow
-10. Create/update `dependabot.yml` and `.mcp-ci.json`
+5. Create `module-upgrade-analyst.md` CI agent definition
+6. Create `terraform-consumer-uplift.yml` (main pipeline + interactive)
+7. Create `terraform-consumer-uplift-apply.yml` (post-merge apply + rollback on failure)
 
 ### Phase C: Documentation & Diagram
 
-11. Create `consumer-uplift-workflow.html` visual diagram
-12. Update playground with reference to new workflow (optional)
+8. Create `consumer-uplift-workflow.html` visual diagram
+9. Update `AGENTS.md` with consumer uplift workflow reference
+
+### Phase D: Optional Enhancements (Deferred)
+
+10. Create `module-update-tracker.yml` (dashboard issue)
+11. Copilot ruleset configuration guide
 
 ---
 
-## 8. Key Design Decisions
+## 9. Key Design Decisions
 
-### D1: Reuse existing agents vs. create new ones
+### D1: Single connected pipeline, no CLI skill
 
-**Decision**: Create ONE new agent (`tf-consumer-uplift-analyzer`), reuse `tf-consumer-developer` and `tf-consumer-validator` with mode-specific arguments.
+**Decision**: Everything runs in GitHub Actions. No `/tf-consumer-uplift` CLI skill.
 
-*Rationale*: The uplift analysis (interface diff, risk assessment) is genuinely new capability. But code adaptation and validation are the same operations as regular consumer development — just with different inputs. Adding mode arguments keeps the agent count low and avoids duplication.
+*Rationale*: The original plan had two independent modes creating duplication and disconnect. The connected architecture uses `claude-code-action` for automated analysis on PR creation and `@claude` mentions for interactive follow-up on the same PR. This eliminates logic duplication and keeps the workflow in one place.
 
-### D2: Separate skill vs. extending tf-consumer-plan
+### D2: Structured JSON output as the bridge
 
-**Decision**: Create a separate `/tf-consumer-uplift` skill, not extend `/tf-consumer-plan`.
+**Decision**: Use `--json-schema` to produce structured output that drives deterministic downstream steps.
 
-*Rationale*: The uplift workflow has fundamentally different inputs (existing code + version bump) versus consumer-plan (greenfield requirements). Combining them would add complexity to both. Separate skills follow the SDD principle of clear entry points.
+*Rationale*: The AI analysis produces a JSON recommendation. Downstream GitHub Actions steps use `fromJSON()` to parse fields and make deterministic decisions (label, merge, block). This separates the "thinking" (AI) from the "acting" (GitHub API) with a clear, auditable contract between them.
 
-### D3: Interactive + CI modes vs. CI only
+### D3: Sonnet for automation, @claude for deep follow-up
 
-**Decision**: Support both modes. Interactive for ad-hoc upgrades, CI for automated Dependabot PRs.
+**Decision**: Automated pipeline uses Sonnet for cost efficiency. Interactive `@claude` also uses Sonnet but can be overridden.
 
-*Rationale*: The external repo only has CI mode, but the SDD framework's strength is interactive human-gated workflows. Teams need both: automated pipeline for routine patches, and interactive mode for complex major upgrades that need human judgment.
+*Rationale*: CI runs on every Dependabot PR -- cost matters. The 5 sub-analyses are structured tasks that don't require Opus. For truly complex cases, users can escalate to human review or adjust the model in the workflow config.
 
-### D4: Sonnet for CI, Opus for interactive
+### D4: Copilot as complementary passive reviewer
 
-**Decision**: CI pipeline uses Sonnet (cost/speed), interactive mode uses Opus (capability).
+**Decision**: Enable GitHub Copilot code review via repository rulesets alongside the Claude pipeline.
 
-*Rationale*: CI runs on every Dependabot PR — cost matters. Structured analysis tasks (interface diff, plan parsing) don't require Opus capability. Interactive mode benefits from Opus's deeper reasoning for complex adaptation decisions.
+*Rationale*: Copilot provides broad code quality feedback (style, bugs, general issues). Claude handles the Terraform-specific uplift analysis (interface diff, MCP tools, risk classification). They don't interfere -- each posts independently.
 
-### D5: No separate constitution for uplift
+### D5: Two-pass validation when AI adapts code
+
+**Decision**: If Job 3 pushes code changes (step 5B), Job 4 sets the decision to `needs-revalidation` instead of a final verdict. The pushed changes trigger a `synchronize` event, which re-runs the full pipeline (Jobs 1-4) on the adapted code. Only the second pass — where no further adaptations are needed — produces a final decision.
+
+*Rationale*: The plan from the first pass is stale after AI code changes. Auto-merging based on a stale plan is unsafe. The two-pass approach guarantees the final decision is based on a plan that matches the actual code. The `adaptations_applied` field in the structured JSON output distinguishes first-pass (adaptations made) from second-pass (no adaptations) runs. This adds one extra pipeline run (~2-4 minutes) but ensures correctness.
+
+**Implementation**: Job 4 checks `if adaptations_applied is not empty → label needs-revalidation, skip merge/block, wait for re-trigger`. The re-triggered run sees clean code, produces a fresh plan, and makes the final decision.
+
+### D6: Rollback strategy on failed applies
+
+**Decision**: On apply failure, the pipeline does NOT auto-revert the merge. Instead, it creates an incident issue with full context and a one-click rollback PR.
+
+*Rationale*: Auto-reverting merges at enterprise scale is dangerous — it can cascade through dependent workspaces, trigger unexpected destroys, and bypass change management. The safer pattern is:
+
+1. **Immediate**: Comment on the merged PR with apply error details and link to the TFC run
+2. **Escalate**: Create a GitHub issue labeled `incident:apply-failure` with the error log, workspace ID, run ID, and the git diff that caused the failure
+3. **Rollback PR**: Auto-generate a draft PR that reverts the merge commit (using `git revert`), pre-titled `[ROLLBACK] Revert module upgrade: {module}@{version}`
+4. **No auto-merge on rollback**: The rollback PR goes through the same pipeline (classify → validate → plan) to ensure the revert is safe before merging
+5. **Notify**: Tag the configured team/CODEOWNERS on the incident issue
+
+This gives the ops team full context, a prepared rollback path, and human control over the recovery. The rollback PR also validates through the pipeline, preventing a bad revert from making things worse.
+
+### D7: Workspace execution mode compatibility
+
+**Decision**: The pipeline supports CLI-driven workspaces as the primary mode, with API-driven as a documented alternative. VCS-backed workspaces are explicitly out of scope for the automated pipeline.
+
+*Rationale*: Research into HCP Terraform workspace types reveals fundamental differences in how each mode interacts with CI:
+
+| Mode | `terraform plan` from CI | `terraform apply` from CI | `-detailed-exitcode` | Provider Creds |
+|------|-------------------------|--------------------------|---------------------|----------------|
+| **CLI-driven** | Yes (remote execution) | Yes (`-auto-approve`) | Yes (with `terraform_wrapper: false`) | Workspace dynamic creds (OIDC) |
+| **API-driven** | N/A (use Runs API) | N/A (confirm via API) | N/A (check run status) | Workspace dynamic creds (OIDC) |
+| **VCS-backed** | Speculative only (read-only) | Blocked ("Apply not allowed") | Limited | Workspace dynamic creds (OIDC) |
+| **Agent** | Same as chosen workflow | Same as chosen workflow | Same as chosen workflow | Agent infrastructure |
+
+**CLI-driven** is the natural fit because:
+- `terraform plan -detailed-exitcode` works natively (exit 0/1/2 flow in Job 2)
+- `terraform apply -auto-approve` works for post-merge apply
+- Provider credentials stay in the workspace (dynamic credentials via OIDC) — the CI runner never needs AWS creds
+- Standard `hashicorp/setup-terraform` action with `terraform_wrapper: false` handles authentication
+
+**VCS-backed is incompatible** because:
+- `terraform apply` is blocked from CLI on VCS-connected workspaces
+- VCS webhooks would trigger duplicate runs alongside the CI pipeline
+- The pipeline's post-merge apply (D6) requires programmatic apply control
+
+**API-driven alternative**: For teams preferring pure API workflows, the pipeline can use `hashicorp/tfc-workflows-github` actions instead of CLI commands. The Validate job would use `upload-configuration` + `create-run` (speculative) instead of `terraform plan`. Decision logic maps run statuses (`planned`, `errored`) instead of exit codes. This is documented as a configuration option, not a separate pipeline.
+
+**Critical implementation note**: The `hashicorp/setup-terraform` action must set `terraform_wrapper: false`. The default wrapper intercepts exit codes, converting exit code 2 (changes detected) to exit code 1 (error) via its `setFailed()` call. Without disabling the wrapper, Job 2's plan exit code gate will malfunction.
+
+### D8: No separate constitution for uplift
 
 **Decision**: Reuse the existing consumer constitution. No `uplift-constitution.md`.
 
-*Rationale*: Uplift produces consumer code — the same rules apply. The consumer constitution already covers version management (Section 4.3: "Major version upgrades require design document update and review"). Adding a separate constitution would create maintenance burden and potential conflicts.
+*Rationale*: Uplift produces consumer code -- the same rules apply. The consumer constitution already covers version management (Section 4.3). Adding a separate constitution would create maintenance burden.
 
 ---
 
-## 9. What We're NOT Adopting From the External Repo
+## 10. What We're NOT Adopting From the External Repo
 
 | External Repo Pattern | Our Approach | Reason |
 |----------------------|--------------|--------|
-| Sonnet for all analysis | Opus for interactive, Sonnet for CI | User requirement: Opus for subagents |
 | Hardcoded TFC org/workspace | Environment variables | Portability across organizations |
-| Docker MCP in CI | npx MCP in CI | External repo already chose npx — we agree (faster cold start) |
-| Single monolithic workflow | Separated concerns (skill + agents + workflow) | SDD framework conventions |
-| No human gate | Human gate in interactive mode | SDD requires Phase 2 approval |
-| Module tracker dashboard issue | Deferred to Phase 4 (cross-repo integration) | Incremental delivery |
+| Separate classify script in workflow | Shared script in `.foundations/scripts/bash/` | Reusable across repos |
+| No interactive follow-up | `@claude` mention in same workflow | Escalation path for complex upgrades |
+| No complementary reviewer | Optional Copilot code review | Defense in depth |
+| No module tracker | Self-updating tracker issue | Org-wide visibility of pending upgrades |
+| `terraform_wrapper: false` assumed | Explicit in setup | Reproducibility |
 
 ---
 
-## 10. Success Criteria
+## 11. Authentication & Secrets
 
-1. `/tf-consumer-uplift` skill successfully analyzes a module version bump and produces a design document
-2. GitHub Actions workflow classifies, validates, analyzes, and labels a Dependabot PR
-3. Low-risk patches are auto-merged; high-risk changes are blocked with analysis
-4. Decision matrix correctly maps semver type + breaking changes + plan diff to risk level
-5. Reused agents (`tf-consumer-developer`, `tf-consumer-validator`) work correctly in uplift mode
-6. Visual diagram accurately represents the workflow using the established design theme
+| Secret | Purpose | Scope |
+|--------|---------|-------|
+| `TFE_TOKEN` | Terraform init, plan, MCP tools, TFC API | GitHub Actions |
+| `TFE_TOKEN_DEPENDABOT` | Private registry version detection | Dependabot (read-only) |
+| `ANTHROPIC_API_KEY` | claude-code-action API authentication | GitHub Actions |
+| `GITHUB_TOKEN` | PR operations (labels, merge, comments) | Auto-provided |
+
+**Provider credentials (AWS, Azure, GCP)** are NOT stored in GitHub Actions secrets. They are managed by HCP Terraform's dynamic provider credentials (OIDC) configured on the workspace. When the CI pipeline runs `terraform plan`, execution happens remotely in HCP Terraform's environment, which generates workload identity tokens and exchanges them for temporary cloud provider credentials. The GitHub Actions runner never needs cloud provider access (see Decision D7).
+
+---
+
+## 12. Success Criteria
+
+1. Dependabot PR triggers the pipeline and produces a structured analysis
+2. Low-risk patches (patch/minor, no breaking, small plan) auto-merge
+3. High-risk changes are blocked with detailed analysis and `@claude` follow-up instructions
+4. `@claude` mention on a blocked PR provides interactive deep analysis with MCP tools
+5. Post-merge apply successfully triggers HCP Terraform run
+6. Module tracker dashboard accurately reflects pending upgrades
+7. Decision matrix correctly maps semver type + breaking changes + plan diff to risk level
+8. Visual diagram accurately represents the connected architecture

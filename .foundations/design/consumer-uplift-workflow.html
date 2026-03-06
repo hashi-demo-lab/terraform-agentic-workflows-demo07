@@ -77,35 +77,27 @@ body {
   max-width: 640px; margin: 0 auto 32px; font-weight: 300;
 }
 
-/* === MODE CARDS === */
-.mode-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+/* === PILLAR CARDS === */
+.pillar-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
   max-width: var(--max-w); margin: 0 auto 48px; padding: 0 28px;
 }
-.mode-card {
-  border: 1px solid var(--border); border-radius: 8px; padding: 24px;
-  background: white; transition: all 0.2s; cursor: pointer;
+.pillar-card {
+  border: 1px solid var(--border); border-radius: 8px; padding: 20px;
+  background: white; transition: all 0.2s;
 }
-.mode-card:hover { border-color: var(--text-caption); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-.mode-card.active { border-color: var(--red); box-shadow: 0 2px 12px rgba(196,40,58,0.08); }
-.mode-label {
+.pillar-card:hover { border-color: var(--text-caption); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.pillar-label {
   font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
   text-transform: uppercase; margin-bottom: 8px;
 }
-.mode-card h3 {
-  font-family: var(--serif); font-size: 20px; font-weight: 700;
-  color: var(--text); margin-bottom: 6px;
-}
-.mode-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-.mode-card code {
+.pillar-card p { font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+.pillar-card code {
   font-family: var(--mono); font-size: 11px; background: var(--bg-code);
   padding: 1px 5px; border-radius: 3px; color: var(--red);
 }
 
 /* === SECTIONS === */
-.chapter {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 28px;
-}
 .chapter-divider {
   text-align: center; padding: 48px 28px 32px;
   border-top: 1px solid var(--border);
@@ -205,10 +197,10 @@ body {
   color: var(--text-muted); font-weight: 400;
 }
 .matrix-table tr:last-child td { border-bottom: none; }
-.risk-low { background: rgba(45,122,79,0.08); color: var(--green); font-weight: 600; }
-.risk-med { background: rgba(154,123,45,0.08); color: var(--yellow); font-weight: 600; }
-.risk-high { background: rgba(184,115,51,0.08); color: var(--orange); font-weight: 600; }
-.risk-crit { background: rgba(196,40,58,0.08); color: var(--red); font-weight: 600; }
+.risk-low { background: rgba(45,122,79,0.18); color: #1B5E3A; font-weight: 700; }
+.risk-med { background: rgba(154,123,45,0.18); color: #7A6220; font-weight: 700; }
+.risk-high { background: rgba(184,115,51,0.20); color: #8B5A1E; font-weight: 700; }
+.risk-crit { background: rgba(196,40,58,0.18); color: #9B1B2D; font-weight: 700; }
 
 /* === ARTIFACT TABLE === */
 .artifact-table {
@@ -233,34 +225,13 @@ body {
 .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; letter-spacing: 0.5px; color: var(--text-caption); }
 .legend-dot { width: 6px; height: 6px; border-radius: 50%; }
 
-/* === PIPELINE === */
-.pipeline {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 12px 0 8px;
-}
-.pipe-phase {
-  border: 1px solid; border-radius: 6px; padding: 6px 14px;
-  font-family: var(--mono); font-size: 11px; font-weight: 600;
-  letter-spacing: 1.2px; text-transform: uppercase; white-space: nowrap;
-  background: white;
-}
-.pipe-arrow { color: var(--text-caption); font-size: 14px; padding: 0 2px; }
-
-/* Responsive */
+/* === RESPONSIVE === */
 @media (max-width:900px) {
-  .mode-grid { grid-template-columns: 1fr; }
+  .pillar-grid { grid-template-columns: 1fr; }
   .card-grid, .card-grid.triple { grid-template-columns: 1fr; }
   .landing-headline { font-size: 28px; }
-}
-
-/* === ANIMATED SVG KEYFRAMES === */
-@keyframes svg-shimmer {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 1; }
-}
-@keyframes svg-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  .svg-diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .svg-diagram svg { min-width: 700px; }
 }
 </style>
 </head>
@@ -268,59 +239,50 @@ body {
 
 <!-- HEADER -->
 <div id="header">
-  <div id="header-title"><span>Consumer Module</span> Uplift Workflow</div>
+  <div id="header-title"><span>Consumer Module</span> Uplift</div>
   <div id="header-nav">
     <a class="header-link active" href="#landing">Overview</a>
     <a class="header-link" href="#pipeline-section">Pipeline</a>
-    <a class="header-link" href="#interactive-section">Interactive</a>
+    <a class="header-link" href="#escalation-section">Escalation</a>
     <a class="header-link" href="#decision-section">Decision</a>
+    <a class="header-link" href="#apply-section">Apply</a>
     <a class="header-link" href="#artifacts-section">Artifacts</a>
   </div>
 </div>
 
 <!-- ===== LANDING ===== -->
 <section id="landing">
-  <div class="landing-eyebrow">USE CASE 1 — CONSUMER MODULE UPLIFT</div>
+  <div class="landing-eyebrow">USE CASE 1 -- CONSUMER MODULE UPLIFT</div>
   <h1 class="landing-headline">Automated Module Version Upgrades for HCP Terraform Consumers</h1>
-  <p class="landing-body">When a module author publishes a new version to the private registry, consumers need their workspace code updated. This workflow combines Dependabot detection with AI-powered analysis to classify risk, adapt code, and decide whether to auto-merge, request review, or block.</p>
+  <p class="landing-body">A connected GitHub Actions pipeline that detects module version bumps, runs AI-powered analysis with Terraform MCP tools, adapts consumer code, and auto-merges safe changes -- with <code>@claude</code> interactive escalation for complex upgrades.</p>
 </section>
 
-<!-- MODE CARDS -->
-<div class="mode-grid">
-  <div class="mode-card active" onclick="toggleMode(this, 'ci')">
-    <div class="mode-label" style="color:var(--cyan)">CI PIPELINE</div>
-    <h3>GitHub Actions</h3>
-    <p>Automated 4-job workflow triggered by Dependabot PRs. Uses Sonnet for cost-efficient analysis. Auto-merges low-risk patches, blocks breaking changes.</p>
-    <div class="node-row" style="margin-top:8px">
-      <span class="node node-script">classify</span>
-      <span class="node node-cmd">validate</span>
-      <span class="node node-agent">analyze</span>
-      <span class="node node-skill">decide</span>
-    </div>
+<!-- PILLAR CARDS -->
+<div class="pillar-grid">
+  <div class="pillar-card">
+    <div class="pillar-label" style="color:var(--cyan)">DETECT</div>
+    <p>Dependabot scans the private registry daily. A fallback cron scanner catches submodule paths Dependabot misses. Both create PRs in the same format.</p>
   </div>
-  <div class="mode-card" onclick="toggleMode(this, 'interactive')">
-    <div class="mode-label" style="color:var(--purple)">INTERACTIVE</div>
-    <h3><code>/tf-consumer-uplift</code></h3>
-    <p>Full SDD 4-phase workflow with human gates. Uses Opus for deep analysis. Produces design document, adapts code, validates with sandbox deployment.</p>
-    <div class="node-row" style="margin-top:8px">
-      <span class="node node-agent">analyze</span>
-      <span class="node node-template">design</span>
-      <span class="node node-skill">implement</span>
-      <span class="node node-script">validate</span>
-    </div>
+  <div class="pillar-card">
+    <div class="pillar-label" style="color:var(--purple)">ANALYZE</div>
+    <p><code>claude-code-action</code> with Terraform MCP diffs module interfaces, adapts config, reviews security, and produces a structured risk assessment.</p>
+  </div>
+  <div class="pillar-card">
+    <div class="pillar-label" style="color:var(--green)">DECIDE</div>
+    <p>Structured JSON output drives deterministic decisions: auto-merge low-risk patches, request review for medium, block breaking changes. <code>@claude</code> for follow-up.</p>
   </div>
 </div>
 
-<!-- ===== CI PIPELINE ===== -->
+<!-- ===== CONNECTED PIPELINE ===== -->
 <div class="chapter-divider" id="pipeline-section">
-  <div class="chapter-number">CI Pipeline</div>
-  <h2 class="chapter-title">5-Layer Automated Pipeline</h2>
-  <p class="chapter-subtitle">Detection, validation, AI analysis, decision, and apply -- fully automated for Dependabot PRs</p>
+  <div class="chapter-number">Connected Pipeline</div>
+  <h2 class="chapter-title">Single Workflow, Two Entry Points</h2>
+  <p class="chapter-subtitle">One <code>.yml</code> file handles both automated PR analysis and interactive <code>@claude</code> follow-up -- separate trigger paths, shared infrastructure</p>
 </div>
 
 <div class="subsection revealed" id="pipeline-diagram">
   <div class="svg-diagram" style="max-width:820px">
-    <svg viewBox="0 0 820 520" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 820 760" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern id="pipe-grid" width="20" height="20" patternUnits="userSpaceOnUse">
           <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0DCD4" stroke-width="0.3" opacity="0.4"/>
@@ -328,379 +290,371 @@ body {
         <filter id="pipe-shadow" x="-5%" y="-5%" width="110%" height="120%">
           <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.08"/>
         </filter>
-        <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#C4283A" opacity="0.5"/>
-        </marker>
-        <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8A8A8A" opacity="0.4"/>
+        <marker id="arrow-grey" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,4 L0,8 Z" fill="#C0BDB5"/>
         </marker>
       </defs>
 
       <!-- Background -->
-      <rect x="0" y="0" width="820" height="520" rx="10" fill="#FAFAF8"/>
-      <rect x="0" y="0" width="820" height="520" rx="10" fill="url(#pipe-grid)"/>
-      <rect x="0" y="0" width="820" height="520" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
+      <rect x="0" y="0" width="820" height="760" rx="10" fill="#FAFAF8"/>
+      <rect x="0" y="0" width="820" height="760" rx="10" fill="url(#pipe-grid)"/>
+      <rect x="0" y="0" width="820" height="760" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
 
       <!-- Title -->
-      <text x="410" y="28" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="2.5">CONSUMER MODULE UPLIFT CI PIPELINE</text>
+      <text x="410" y="24" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="2.5">terraform-consumer-uplift.yml</text>
 
-      <!-- === LAYER 1: DETECTION === -->
+      <!-- ============================================ -->
+      <!-- === TRIGGER ZONE: Two entry points ========= -->
+      <!-- ============================================ -->
+
+      <!-- Shared container -->
       <g filter="url(#pipe-shadow)">
-        <rect x="20" y="45" width="180" height="72" rx="8" fill="#1A6B7A">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite"/>
-        </rect>
+        <rect x="20" y="38" width="780" height="72" rx="8" fill="white" stroke="var(--border)" stroke-width="1"/>
       </g>
-      <text x="110" y="65" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">LAYER 1</text>
-      <text x="110" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="14" fill="white" font-weight="700">Detection</text>
-      <text x="110" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Dependabot + Cron Scanner</text>
+      <text x="410" y="54" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#8A8A8A" letter-spacing="2">SINGLE WORKFLOW FILE -- TWO ENTRY POINTS</text>
 
-      <!-- Arrow L1 to L2 -->
-      <line x1="205" y1="81" x2="238" y2="81" stroke="#E0DCD4" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+      <!-- Path A: Automated -->
+      <rect x="30" y="62" width="370" height="38" rx="6" fill="#1A6B7A" opacity="0.06" stroke="#1A6B7A" stroke-width="1"/>
+      <text x="42" y="78" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="700" letter-spacing="1">PATH A: pull_request</text>
+      <text x="42" y="93" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">Dependabot PR or fallback scanner &rarr; Jobs 1-4</text>
 
-      <!-- === LAYER 2: VALIDATION === -->
+      <!-- Divider -->
+      <line x1="410" y1="65" x2="410" y2="97" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 2"/>
+
+      <!-- Path B: Interactive -->
+      <rect x="420" y="62" width="370" height="38" rx="6" fill="#6B3FA0" opacity="0.06" stroke="#6B3FA0" stroke-width="1"/>
+      <text x="432" y="78" font-family="JetBrains Mono,monospace" font-size="9" fill="#6B3FA0" font-weight="700" letter-spacing="1">PATH B: issue_comment @claude</text>
+      <text x="432" y="93" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">Human mentions @claude on PR &rarr; Interactive job</text>
+
+      <!-- ============================================ -->
+      <!-- === PIPELINE JOBS (Path A) ================= -->
+      <!-- ============================================ -->
+
+      <!-- Downward arrow from Path A -->
+      <line x1="215" y1="110" x2="215" y2="125" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
+
+      <!-- === JOB 1: CLASSIFY === -->
       <g filter="url(#pipe-shadow)">
-        <rect x="245" y="45" width="180" height="72" rx="8" fill="#B87333">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="0.3s"/>
-        </rect>
+        <rect x="20" y="130" width="170" height="62" rx="8" fill="#1A6B7A"/>
       </g>
-      <text x="335" y="65" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">LAYER 2</text>
-      <text x="335" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="14" fill="white" font-weight="700">Validation</text>
-      <text x="335" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">fmt, init, validate, plan</text>
+      <text x="105" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 1</text>
+      <text x="105" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Classify</text>
+      <text x="105" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Semver from git diff</text>
 
-      <!-- Arrow L2 to L3 -->
-      <line x1="430" y1="81" x2="463" y2="81" stroke="#E0DCD4" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+      <!-- Arrow 1→2 -->
+      <line x1="195" y1="161" x2="218" y2="161" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
 
-      <!-- === LAYER 3: AI ANALYSIS === -->
+      <!-- === JOB 2: VALIDATE === -->
       <g filter="url(#pipe-shadow)">
-        <rect x="470" y="45" width="180" height="72" rx="8" fill="#6B3FA0">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="0.6s"/>
-        </rect>
+        <rect x="222" y="130" width="170" height="62" rx="8" fill="#B87333"/>
       </g>
-      <text x="560" y="65" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">LAYER 3</text>
-      <text x="560" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="14" fill="white" font-weight="700">AI Analysis</text>
-      <text x="560" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Claude + Terraform MCP</text>
+      <text x="307" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 2</text>
+      <text x="307" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Validate</text>
+      <text x="307" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">fmt, validate, plan</text>
 
-      <!-- Arrow L3 to L4 -->
-      <line x1="655" y1="81" x2="688" y2="81" stroke="#E0DCD4" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+      <!-- Arrow 2→3 -->
+      <line x1="397" y1="161" x2="420" y2="161" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
 
-      <!-- === LAYER 4: DECISION === -->
+      <!-- === JOB 3: AI ANALYSIS === -->
       <g filter="url(#pipe-shadow)">
-        <rect x="695" y="45" width="110" height="72" rx="8" fill="#C4283A">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="0.9s"/>
-        </rect>
+        <rect x="424" y="130" width="195" height="62" rx="8" fill="#6B3FA0"/>
       </g>
-      <text x="750" y="65" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">LAYER 4</text>
-      <text x="750" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="14" fill="white" font-weight="700">Decision</text>
-      <text x="750" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Risk Matrix</text>
+      <text x="521" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 3</text>
+      <text x="521" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">AI Analysis</text>
+      <text x="521" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">claude-code-action + MCP</text>
 
-      <!-- === LAYER 2 DETAIL: Validation Steps === -->
+      <!-- Arrow 3→4 -->
+      <line x1="624" y1="161" x2="647" y2="161" stroke="#C0BDB5" stroke-width="1.5" marker-end="url(#arrow-grey)"/>
+
+      <!-- === JOB 4: DECISION === -->
       <g filter="url(#pipe-shadow)">
-        <rect x="20" y="145" width="405" height="90" rx="8" fill="white" stroke="#B87333" stroke-width="1.5"/>
+        <rect x="651" y="130" width="149" height="62" rx="8" fill="#C4283A"/>
       </g>
-      <rect x="20" y="145" width="405" height="5" rx="2.5" fill="#B87333"/>
-      <text x="40" y="168" font-family="JetBrains Mono,monospace" font-size="10" fill="#B87333" letter-spacing="1.5" font-weight="700">DETERMINISTIC VALIDATION</text>
+      <text x="725" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">JOB 4</text>
+      <text x="725" y="168" text-anchor="middle" font-family="Playfair Display,serif" font-size="16" fill="white" font-weight="700">Decision</text>
+      <text x="725" y="183" text-anchor="middle" font-size="10" fill="white" opacity="0.75">fromJSON()</text>
 
-      <!-- Validation steps -->
-      <rect x="35" y="178" width="72" height="22" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="71" y="193" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">classify</text>
-      <text x="115" y="193" font-family="var(--sans)" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="127" y="178" width="52" height="22" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="153" y="193" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">fmt</text>
-      <text x="187" y="193" font-family="var(--sans)" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="199" y="178" width="48" height="22" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="223" y="193" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">init</text>
-      <text x="255" y="193" font-family="var(--sans)" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="267" y="178" width="56" height="22" rx="4" fill="#B87333" opacity="0.08"/>
-      <text x="295" y="193" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">tflint</text>
-      <text x="331" y="193" font-family="var(--sans)" font-size="12" fill="#8A8A8A">&rarr;</text>
-      <rect x="343" y="178" width="68" height="22" rx="4" fill="#B87333" opacity="0.1"/>
-      <text x="377" y="193" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="700">plan</text>
-
-      <!-- Plan exit codes -->
-      <text x="40" y="222" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">exit 0 &rarr; close PR</text>
-      <text x="180" y="222" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A">exit 1 &rarr; label breaking</text>
-      <text x="340" y="222" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F">exit 2 &rarr; continue</text>
-
-      <!-- === LAYER 3 DETAIL: AI Analysis === -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="20" y="255" width="785" height="110" rx="8" fill="white" stroke="#6B3FA0" stroke-width="1.5"/>
-      </g>
-      <rect x="20" y="255" width="785" height="5" rx="2.5" fill="#6B3FA0"/>
-      <text x="40" y="280" font-family="JetBrains Mono,monospace" font-size="10" fill="#6B3FA0" letter-spacing="1.5" font-weight="700">AI AGENT ANALYSIS (CLAUDE + TERRAFORM MCP)</text>
-
-      <!-- 5 analysis sub-tasks -->
-      <g filter="url(#pipe-shadow)">
-        <rect x="35" y="292" width="130" height="56" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="100" y="310" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5A</text>
-      <text x="100" y="324" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#3D3D3D">Interface Diff</text>
-      <text x="100" y="340" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D">MCP: module details</text>
-
-      <g filter="url(#pipe-shadow)">
-        <rect x="175" y="292" width="130" height="56" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="240" y="310" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5B</text>
-      <text x="240" y="324" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#3D3D3D">Config Adaptation</text>
-      <text x="240" y="340" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#1A6B7A">code changes</text>
-
-      <g filter="url(#pipe-shadow)">
-        <rect x="315" y="292" width="130" height="56" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="380" y="310" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5C</text>
-      <text x="380" y="324" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#3D3D3D">Security Review</text>
-      <text x="380" y="340" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">IAM, encryption</text>
-
-      <g filter="url(#pipe-shadow)">
-        <rect x="455" y="292" width="130" height="56" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
-      </g>
-      <text x="520" y="310" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5D</text>
-      <text x="520" y="324" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#3D3D3D">Plan Analysis</text>
-      <text x="520" y="340" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#B87333">add/change/destroy</text>
-
-      <!-- Aggregation arrow to 5E -->
-      <path d="M165,332 L605,332" fill="none" stroke="rgba(107,63,160,0.15)" stroke-width="1"/>
-      <line x1="595" y1="332" x2="595" y2="308" stroke="rgba(107,63,160,0.2)" stroke-width="1"/>
-
-      <g filter="url(#pipe-shadow)">
-        <rect x="595" y="292" width="195" height="56" rx="6" fill="#6B3FA0" opacity="0.06" stroke="#6B3FA0" stroke-width="1.5"/>
-      </g>
-      <text x="692" y="310" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5E: RECOMMENDATION</text>
-      <text x="692" y="324" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#3D3D3D">Decision Matrix</text>
-      <text x="692" y="340" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">JSON output</text>
-
-      <!-- Animated particles from 5A-5D to 5E -->
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2s" repeatCount="indefinite" begin="0s" path="M100,348 L100,356 L692,356 L692,348"/>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0s"/>
+      <!-- === ANIMATED PIPELINE FLOW: sequential dot traveling Job1→Job2→Job3→Job4 === -->
+      <circle r="4" fill="#1A6B7A" opacity="0">
+        <animateMotion dur="6s" repeatCount="indefinite" path="M105,192 L105,200 L307,200 L307,192" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
+        <animate attributeName="opacity" values="0;0.9;0.9;0" dur="6s" repeatCount="indefinite" keyTimes="0;0.05;0.95;1"/>
+        <animate attributeName="fill" values="#1A6B7A;#1A6B7A;#B87333;#B87333" dur="6s" repeatCount="indefinite" keyTimes="0;0.4;0.6;1"/>
       </circle>
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2s" repeatCount="indefinite" begin="0.5s" path="M240,348 L240,356 L692,356 L692,348"/>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+      <circle r="4" fill="#B87333" opacity="0">
+        <animateMotion dur="6s" repeatCount="indefinite" begin="1.5s" path="M307,192 L307,200 L521,200 L521,192" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
+        <animate attributeName="opacity" values="0;0.9;0.9;0" dur="6s" repeatCount="indefinite" begin="1.5s" keyTimes="0;0.05;0.95;1"/>
+        <animate attributeName="fill" values="#B87333;#B87333;#6B3FA0;#6B3FA0" dur="6s" repeatCount="indefinite" begin="1.5s" keyTimes="0;0.4;0.6;1"/>
       </circle>
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2s" repeatCount="indefinite" begin="1.0s" path="M380,348 L380,356 L692,356 L692,348"/>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="1.0s"/>
-      </circle>
-      <circle r="3" fill="#6B3FA0" opacity="0">
-        <animateMotion dur="2s" repeatCount="indefinite" begin="1.5s" path="M520,348 L520,356 L692,356 L692,348"/>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="1.5s"/>
+      <circle r="4" fill="#6B3FA0" opacity="0">
+        <animateMotion dur="6s" repeatCount="indefinite" begin="3s" path="M521,192 L521,200 L725,200 L725,192" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
+        <animate attributeName="opacity" values="0;0.9;0.9;0" dur="6s" repeatCount="indefinite" begin="3s" keyTimes="0;0.05;0.95;1"/>
+        <animate attributeName="fill" values="#6B3FA0;#6B3FA0;#C4283A;#C4283A" dur="6s" repeatCount="indefinite" begin="3s" keyTimes="0;0.4;0.6;1"/>
       </circle>
 
-      <!-- === LAYER 4 DETAIL: Decision Outcomes === -->
+      <!-- ============================================ -->
+      <!-- === VALIDATE DETAIL (Job 2 expanded) ======= -->
+      <!-- ============================================ -->
+      <g filter="url(#pipe-shadow)">
+        <rect x="20" y="215" width="460" height="80" rx="8" fill="white" stroke="#B87333" stroke-width="1.5"/>
+      </g>
+      <rect x="20" y="215" width="460" height="4" rx="2" fill="#B87333"/>
+      <text x="40" y="238" font-family="JetBrains Mono,monospace" font-size="10" fill="#B87333" letter-spacing="1.5" font-weight="700">JOB 2: DETERMINISTIC VALIDATION</text>
+
+      <!-- Steps: fmt → init → validate → tflint → plan -->
+      <rect x="35" y="248" width="44" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+      <text x="57" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">fmt</text>
+      <text x="87" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
+      <rect x="97" y="248" width="44" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+      <text x="119" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">init</text>
+      <text x="149" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
+      <rect x="159" y="248" width="64" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+      <text x="191" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">validate</text>
+      <text x="231" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
+      <rect x="241" y="248" width="50" height="20" rx="4" fill="#B87333" opacity="0.08"/>
+      <text x="266" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="600">tflint</text>
+      <text x="299" y="262" font-size="12" fill="#8A8A8A">&rarr;</text>
+      <rect x="309" y="248" width="90" height="20" rx="4" fill="#B87333" opacity="0.1"/>
+      <text x="354" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="700">plan -detailed</text>
+
+      <!-- Exit codes -->
+      <text x="35" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">exit 0: comment + close PR</text>
+      <text x="210" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A">exit 1: label breaking</text>
+      <text x="380" y="286" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F">exit 2: &darr;</text>
+
+      <!-- ============================================ -->
+      <!-- === AI ANALYSIS DETAIL (Job 3 expanded) ==== -->
+      <!-- ============================================ -->
+      <g filter="url(#pipe-shadow)">
+        <rect x="20" y="315" width="780" height="120" rx="8" fill="white" stroke="#6B3FA0" stroke-width="1.5"/>
+      </g>
+      <rect x="20" y="315" width="780" height="4" rx="2" fill="#6B3FA0"/>
+      <text x="40" y="340" font-family="JetBrains Mono,monospace" font-size="10" fill="#6B3FA0" letter-spacing="1.5" font-weight="700">JOB 3: claude-code-action + TERRAFORM MCP SERVER</text>
+      <text x="710" y="340" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">--json-schema</text>
+
+      <!-- 5 sub-tasks -->
+      <g filter="url(#pipe-shadow)">
+        <rect x="35" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+      </g>
+      <text x="100" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5A: INTERFACE DIFF</text>
+      <text x="100" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">old vs new inputs/outputs</text>
+      <text x="100" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D">MCP: module_details</text>
+
+      <g filter="url(#pipe-shadow)">
+        <rect x="175" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+      </g>
+      <text x="240" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5B: ADAPT CONFIG</text>
+      <text x="240" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">fix code, push to PR</text>
+      <text x="240" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#1A6B7A">contents: write</text>
+
+      <g filter="url(#pipe-shadow)">
+        <rect x="315" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+      </g>
+      <text x="380" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5C: SECURITY</text>
+      <text x="380" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">IAM, encryption, exposure</text>
+      <text x="380" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">severity rating</text>
+
+      <g filter="url(#pipe-shadow)">
+        <rect x="455" y="352" width="130" height="52" rx="6" fill="white" stroke="rgba(107,63,160,0.3)" stroke-width="1"/>
+      </g>
+      <text x="520" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5D: PLAN ANALYSIS</text>
+      <text x="520" y="386" text-anchor="middle" font-size="10" fill="#6B6B6B">add/change/destroy</text>
+      <text x="520" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#B87333">blast radius</text>
+
+      <!-- Aggregation to 5E -->
+      <g filter="url(#pipe-shadow)">
+        <rect x="595" y="352" width="190" height="52" rx="6" fill="#6B3FA0" opacity="0.06" stroke="#6B3FA0" stroke-width="1.5"/>
+      </g>
+      <text x="690" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" letter-spacing="1" font-weight="700">5E: RECOMMENDATION</text>
+      <text x="690" y="386" text-anchor="middle" font-size="10" fill="#3D3D3D">Decision Matrix &rarr; JSON</text>
+      <text x="690" y="398" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">structured_output</text>
+
+      <!-- Animated particles from 5A-5D to 5E (sequential, staggered) -->
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0s" path="M100,404 L100,416 L690,416 L690,404"/>
+        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0s" keyTimes="0;0.1;0.85;1"/>
+      </circle>
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0.6s" path="M240,404 L240,416 L690,416 L690,404"/>
+        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0.6s" keyTimes="0;0.1;0.85;1"/>
+      </circle>
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.2s" path="M380,404 L380,416 L690,416 L690,404"/>
+        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.2s" keyTimes="0;0.1;0.85;1"/>
+      </circle>
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.8s" path="M520,404 L520,416 L690,416 L690,404"/>
+        <animate attributeName="opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.8s" keyTimes="0;0.1;0.85;1"/>
+      </circle>
+
+      <!-- ============================================ -->
+      <!-- === DECISION OUTCOMES ====================== -->
+      <!-- ============================================ -->
+
+      <!-- Arrow from 5E down -->
+      <line x1="690" y1="410" x2="690" y2="445" stroke="#C0BDB5" stroke-width="1.5" stroke-dasharray="4 3"/>
+
       <!-- Auto-merge -->
       <g filter="url(#pipe-shadow)">
-        <rect x="20" y="390" width="240" height="56" rx="8" fill="white" stroke="#2D7A4F" stroke-width="1.5"/>
+        <rect x="20" y="460" width="240" height="52" rx="8" fill="white" stroke="#2D7A4F" stroke-width="1.5"/>
       </g>
-      <rect x="20" y="390" width="240" height="4" rx="2" fill="#2D7A4F"/>
-      <circle cx="44" cy="420" r="8" fill="#2D7A4F" opacity="0.15"/>
-      <text x="44" y="424" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#2D7A4F" font-weight="700">&#10003;</text>
-      <text x="62" y="416" font-family="JetBrains Mono,monospace" font-size="10" fill="#2D7A4F" font-weight="700" letter-spacing="1">AUTO-MERGE</text>
-      <text x="62" y="432" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">Squash merge, risk:low</text>
+      <rect x="20" y="460" width="240" height="4" rx="2" fill="#2D7A4F"/>
+      <circle cx="44" cy="488" r="8" fill="#2D7A4F" opacity="0.15"/>
+      <text x="44" y="492" text-anchor="middle" font-size="11" fill="#2D7A4F" font-weight="700">&#10003;</text>
+      <text x="62" y="484" font-family="JetBrains Mono,monospace" font-size="10" fill="#2D7A4F" font-weight="700" letter-spacing="1">AUTO-MERGE</text>
+      <text x="62" y="500" font-size="11" fill="#6B6B6B">Squash merge, risk:low</text>
 
       <!-- Needs review -->
       <g filter="url(#pipe-shadow)">
-        <rect x="275" y="390" width="240" height="56" rx="8" fill="white" stroke="#9A7B2D" stroke-width="1.5"/>
+        <rect x="275" y="460" width="240" height="52" rx="8" fill="white" stroke="#9A7B2D" stroke-width="1.5"/>
       </g>
-      <rect x="275" y="390" width="240" height="4" rx="2" fill="#9A7B2D"/>
-      <circle cx="299" cy="420" r="8" fill="#9A7B2D" opacity="0.15"/>
-      <text x="299" y="424" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#9A7B2D" font-weight="700">!</text>
-      <text x="317" y="416" font-family="JetBrains Mono,monospace" font-size="10" fill="#9A7B2D" font-weight="700" letter-spacing="1">NEEDS-REVIEW</text>
-      <text x="317" y="432" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">Request reviewer, risk:medium+</text>
+      <rect x="275" y="460" width="240" height="4" rx="2" fill="#9A7B2D"/>
+      <circle cx="299" cy="488" r="8" fill="#9A7B2D" opacity="0.15"/>
+      <text x="299" y="492" text-anchor="middle" font-size="11" fill="#9A7B2D" font-weight="700">!</text>
+      <text x="317" y="484" font-family="JetBrains Mono,monospace" font-size="10" fill="#9A7B2D" font-weight="700" letter-spacing="1">NEEDS-REVIEW</text>
+      <text x="317" y="500" font-size="11" fill="#6B6B6B">Label + "@claude for help"</text>
 
       <!-- Breaking change -->
       <g filter="url(#pipe-shadow)">
-        <rect x="530" y="390" width="275" height="56" rx="8" fill="white" stroke="#C4283A" stroke-width="1.5"/>
+        <rect x="530" y="460" width="270" height="52" rx="8" fill="white" stroke="#C4283A" stroke-width="1.5"/>
       </g>
-      <rect x="530" y="390" width="275" height="4" rx="2" fill="#C4283A"/>
-      <circle cx="554" cy="420" r="8" fill="#C4283A" opacity="0.15"/>
-      <text x="554" y="424" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#C4283A" font-weight="700">&#10007;</text>
-      <text x="572" y="416" font-family="JetBrains Mono,monospace" font-size="10" fill="#C4283A" font-weight="700" letter-spacing="1">BREAKING-CHANGE</text>
-      <text x="572" y="432" font-family="Source Sans 3,sans-serif" font-size="11" fill="#6B6B6B">Block merge, risk:high/critical</text>
+      <rect x="530" y="460" width="270" height="4" rx="2" fill="#C4283A"/>
+      <circle cx="554" cy="488" r="8" fill="#C4283A" opacity="0.15"/>
+      <text x="554" y="492" text-anchor="middle" font-size="11" fill="#C4283A" font-weight="700">&#10007;</text>
+      <text x="572" y="484" font-family="JetBrains Mono,monospace" font-size="10" fill="#C4283A" font-weight="700" letter-spacing="1">BREAKING-CHANGE</text>
+      <text x="572" y="500" font-size="11" fill="#6B6B6B">Block merge + detailed analysis</text>
 
-      <!-- Arrows from recommendation to outcomes -->
-      <path d="M640,352 C640,370 140,372 140,390" fill="none" stroke="#2D7A4F" stroke-width="1.5" opacity="0.3"/>
-      <path d="M692,352 C692,370 395,372 395,390" fill="none" stroke="#9A7B2D" stroke-width="1.5" opacity="0.3"/>
-      <path d="M740,352 C740,370 667,372 667,390" fill="none" stroke="#C4283A" stroke-width="1.5" opacity="0.3"/>
+      <!-- Arrows from decision zone to outcomes -->
+      <path d="M640,445 C640,452 140,455 140,460" fill="none" stroke="#2D7A4F" stroke-width="1.5" opacity="0.3"/>
+      <path d="M690,445 C690,452 395,455 395,460" fill="none" stroke="#9A7B2D" stroke-width="1.5" opacity="0.3"/>
+      <path d="M740,445 C740,452 665,455 665,460" fill="none" stroke="#C4283A" stroke-width="1.5" opacity="0.3"/>
 
-      <!-- Animated particles for decision paths -->
+      <!-- Animated decision particles (sequential: green first, then yellow, then red) -->
       <circle r="3" fill="#2D7A4F" opacity="0">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0s" path="M640,352 C640,370 140,372 140,390"/>
-        <animate attributeName="opacity" values="0;0.7;0" dur="2.5s" repeatCount="indefinite"/>
+        <animateMotion dur="8s" repeatCount="indefinite" begin="0s" path="M640,445 C640,452 140,455 140,460"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0s"/>
       </circle>
       <circle r="3" fill="#9A7B2D" opacity="0">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0.8s" path="M692,352 C692,370 395,372 395,390"/>
-        <animate attributeName="opacity" values="0;0.7;0" dur="2.5s" repeatCount="indefinite"/>
+        <animateMotion dur="8s" repeatCount="indefinite" begin="2.5s" path="M690,445 C690,452 395,455 395,460"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="2.5s"/>
       </circle>
       <circle r="3" fill="#C4283A" opacity="0">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.6s" path="M740,352 C740,370 667,372 667,390"/>
-        <animate attributeName="opacity" values="0;0.7;0" dur="2.5s" repeatCount="indefinite"/>
+        <animateMotion dur="8s" repeatCount="indefinite" begin="5s" path="M740,445 C740,452 665,455 665,460"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="5s"/>
       </circle>
 
-      <!-- Layer 5: Apply bar -->
+      <!-- ============================================ -->
+      <!-- === ESCALATION LOOP ======================== -->
+      <!-- ============================================ -->
+      <!-- Curved arrow from NEEDS-REVIEW back up to @claude trigger (Path B) -->
+      <path d="M515,486 C530,486 810,486 810,310 C810,110 610,80 610,80" fill="none" stroke="#6B3FA0" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.35"/>
+      <polygon points="614,76 606,80 614,84" fill="#6B3FA0" opacity="0.5"/>
+      <text x="814" y="300" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" opacity="0.6" transform="rotate(-90,814,300)">@claude escalation</text>
+
+      <!-- Animated escalation particle -->
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion dur="5s" repeatCount="indefinite" path="M515,486 C530,486 810,486 810,310 C810,110 610,80 610,80"/>
+        <animate attributeName="opacity" values="0;0.6;0.6;0" dur="5s" repeatCount="indefinite" keyTimes="0;0.1;0.85;1"/>
+      </circle>
+
+      <!-- ============================================ -->
+      <!-- === TWO-PASS REVALIDATION NOTE ============= -->
+      <!-- ============================================ -->
       <g filter="url(#pipe-shadow)">
-        <rect x="20" y="468" width="785" height="36" rx="6" fill="#F5F3EF" stroke="#E0DCD4" stroke-width="1"/>
+        <rect x="20" y="535" width="780" height="36" rx="6" fill="white" stroke="#6B3FA0" stroke-width="1" stroke-dasharray="4 3"/>
       </g>
-      <text x="410" y="490" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="2">LAYER 5: ON MERGE &rarr; POST /api/v2/runs &rarr; HCP TERRAFORM APPLY &rarr; COMMENT RESULTS ON PR</text>
+      <text x="410" y="557" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#6B3FA0" letter-spacing="1">IF ADAPTATIONS PUSHED (5B) &rarr; NEEDS-REVALIDATION &rarr; synchronize RE-TRIGGERS JOBS 1-4</text>
+
+      <!-- ============================================ -->
+      <!-- === POST-MERGE APPLY ======================= -->
+      <!-- ============================================ -->
+      <g filter="url(#pipe-shadow)">
+        <rect x="20" y="590" width="780" height="80" rx="8" fill="white" stroke="#2D7A4F" stroke-width="1.5"/>
+      </g>
+      <rect x="20" y="590" width="780" height="4" rx="2" fill="#2D7A4F"/>
+      <text x="40" y="614" font-family="JetBrains Mono,monospace" font-size="10" fill="#2D7A4F" letter-spacing="1.5" font-weight="700">ON MERGE: terraform-consumer-uplift-apply.yml</text>
+
+      <!-- Success path -->
+      <rect x="35" y="624" width="340" height="20" rx="4" fill="#2D7A4F" opacity="0.06" stroke="#2D7A4F" stroke-width="0.5"/>
+      <text x="45" y="638" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F" font-weight="600">SUCCESS: upload config &rarr; create run &rarr; apply &rarr; comment</text>
+
+      <!-- Failure path -->
+      <rect x="395" y="624" width="390" height="20" rx="4" fill="#C4283A" opacity="0.06" stroke="#C4283A" stroke-width="0.5"/>
+      <text x="405" y="638" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A" font-weight="600">FAILURE: incident issue + draft rollback PR + notify CODEOWNERS</text>
+      <text x="40" y="662" font-family="Source Sans 3,sans-serif" font-size="11" fill="#8A8A8A">Rollback PR goes through the normal pipeline for safe revert (see Decision D6)</text>
+
+      <!-- ============================================ -->
+      <!-- === COPILOT BADGE ========================== -->
+      <!-- ============================================ -->
+      <g filter="url(#pipe-shadow)">
+        <rect x="20" y="690" width="780" height="40" rx="6" fill="white" stroke="#E0DCD4" stroke-width="1"/>
+      </g>
+      <text x="40" y="714" font-family="JetBrains Mono,monospace" font-size="9" fill="#4A6B8A" font-weight="700" letter-spacing="1">COMPLEMENTARY: GITHUB COPILOT CODE REVIEW</text>
+      <text x="380" y="714" font-family="Source Sans 3,sans-serif" font-size="11" fill="#8A8A8A">Passive review via repo rulesets (independent, no workflow config needed)</text>
     </svg>
   </div>
 
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#1A6B7A"></div> Detection</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#B87333"></div> Validation</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#6B3FA0"></div> AI Analysis</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1A6B7A"></div> Classify</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#B87333"></div> Validate</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6B3FA0"></div> AI Analysis + @claude</div>
     <div class="legend-item"><div class="legend-dot" style="background:#C4283A"></div> Decision</div>
     <div class="legend-item"><div class="legend-dot" style="background:#2D7A4F"></div> Apply</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4A6B8A"></div> Copilot (passive)</div>
   </div>
 </div>
 
-<!-- ===== INTERACTIVE SDD WORKFLOW ===== -->
-<div class="chapter-divider" id="interactive-section">
-  <div class="chapter-number">Interactive Mode</div>
-  <h2 class="chapter-title">SDD 4-Phase Workflow</h2>
-  <p class="chapter-subtitle">Full human-gated workflow for complex upgrades that need judgment and design review</p>
+<!-- ===== ESCALATION FLOW ===== -->
+<div class="chapter-divider" id="escalation-section">
+  <div class="chapter-number">Escalation</div>
+  <h2 class="chapter-title">The @claude Loop</h2>
+  <p class="chapter-subtitle">When automated analysis labels a PR as needs-review or breaking-change, humans can <code>@claude</code> for interactive follow-up in the same workflow</p>
 </div>
 
 <div class="subsection revealed">
-  <div class="svg-diagram" style="max-width:820px">
-    <svg viewBox="0 0 820 310" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="sdd-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0DCD4" stroke-width="0.3" opacity="0.4"/>
-        </pattern>
-        <filter id="sdd-shadow" x="-5%" y="-5%" width="110%" height="120%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.08"/>
-        </filter>
-      </defs>
+  <div class="card-grid">
+    <div class="ed-card" style="border-top: 3px solid var(--green)">
+      <h3>Low Risk: Auto-Merge</h3>
+      <p>Patch or minor bump, no breaking changes, small plan diff. Pipeline auto-merges with squash. No human intervention needed.</p>
+      <div class="node-row" style="margin-top:8px">
+        <span class="node node-script">risk:low</span>
+        <span class="node node-script">auto-merge</span>
+      </div>
+    </div>
+    <div class="ed-card" style="border-top: 3px solid var(--yellow)">
+      <h3>Medium Risk: @claude Available</h3>
+      <p>Plan changes &gt; 5, or breaking changes that were auto-adapted. Labels applied, reviewer requested. Comment says: <code>@claude for deeper analysis</code>.</p>
+      <div class="node-row" style="margin-top:8px">
+        <span class="node node-mcp">risk:medium</span>
+        <span class="node node-template">needs-review</span>
+      </div>
+    </div>
+    <div class="ed-card" style="border-top: 3px solid var(--orange)">
+      <h3>High Risk: @claude Recommended</h3>
+      <p>Major version bump, DESTROY in plan, or security finding. Detailed analysis posted. <code>@claude</code> can make code changes and push to branch.</p>
+      <div class="node-row" style="margin-top:8px">
+        <span class="node node-artifact">risk:high</span>
+        <span class="node node-agent">@claude adapt</span>
+      </div>
+    </div>
+    <div class="ed-card" style="border-top: 3px solid var(--red)">
+      <h3>Critical: Blocked</h3>
+      <p>Cannot adapt breaking changes, or plan failed. Merge blocked. Requires manual investigation -- <code>@claude</code> provides guided analysis.</p>
+      <div class="node-row" style="margin-top:8px">
+        <span class="node node-cmd">risk:critical</span>
+        <span class="node node-cmd">breaking-change</span>
+      </div>
+    </div>
+  </div>
 
-      <!-- Background -->
-      <rect x="0" y="0" width="820" height="310" rx="10" fill="#FAFAF8"/>
-      <rect x="0" y="0" width="820" height="310" rx="10" fill="url(#sdd-grid)"/>
-      <rect x="0" y="0" width="820" height="310" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
+  <div class="subsection-title" style="margin-top:16px">How @claude Interactive Works</div>
+  <div class="subsection-desc">The same workflow file handles both automated and interactive triggers</div>
 
-      <!-- SDD Title -->
-      <text x="410" y="26" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="2.5">/tf-consumer-uplift &mdash; OPUS AGENTS</text>
-
-      <!-- Phase 1: Detect & Analyze -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="20" y="44" width="180" height="100" rx="8" fill="#C4283A">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite"/>
-        </rect>
-      </g>
-      <text x="110" y="64" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">PHASE 1</text>
-      <text x="110" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="15" fill="white" font-weight="700">Detect &amp; Analyze</text>
-      <text x="110" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">Uplift Analyzers x3</text>
-      <rect x="38" y="110" width="62" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="69" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">MCP tools</text>
-      <rect x="106" y="110" width="76" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="144" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">interface diff</text>
-
-      <!-- Arrow 1 to 2 -->
-      <line x1="205" y1="94" x2="218" y2="94" stroke="#E0DCD4" stroke-width="1.5"/>
-      <polygon points="214,90 222,94 214,98" fill="#6B3FA0" opacity="0.5"/>
-
-      <!-- Phase 2: Plan Adaptation -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="225" y="44" width="180" height="100" rx="8" fill="#6B3FA0">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="0.4s"/>
-        </rect>
-      </g>
-      <text x="315" y="64" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">PHASE 2</text>
-      <text x="315" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="15" fill="white" font-weight="700">Plan Adaptation</text>
-      <text x="315" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">uplift-design.md</text>
-      <rect x="240" y="110" width="68" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="274" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">template</text>
-      <rect x="314" y="110" width="78" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="353" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">constitution</text>
-
-      <!-- HUMAN GATE -->
-      <rect x="416" y="42" width="58" height="104" rx="4" fill="none" stroke="#A03030" stroke-width="1.5" stroke-dasharray="4 3">
-        <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
-      </rect>
-      <text x="445" y="86" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A03030" font-weight="700">HUMAN</text>
-      <text x="445" y="98" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A03030" font-weight="700">GATE</text>
-      <text x="445" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A03030" opacity="0.6">approve</text>
-
-      <!-- Phase 3: Execute -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="485" y="44" width="160" height="100" rx="8" fill="#1A6B7A">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="0.8s"/>
-        </rect>
-      </g>
-      <text x="565" y="64" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">PHASE 3</text>
-      <text x="565" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="15" fill="white" font-weight="700">Execute</text>
-      <text x="565" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">consumer-developer</text>
-      <rect x="500" y="110" width="56" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="528" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">version</text>
-      <rect x="562" y="110" width="68" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="596" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">variables</text>
-
-      <!-- Arrow 3 to 4 -->
-      <line x1="650" y1="94" x2="663" y2="94" stroke="#E0DCD4" stroke-width="1.5"/>
-      <polygon points="659,90 667,94 659,98" fill="#2D7A4F" opacity="0.5"/>
-
-      <!-- Phase 4: Validate -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="670" y="44" width="135" height="100" rx="8" fill="#2D7A4F">
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="1.2s"/>
-        </rect>
-      </g>
-      <text x="737" y="64" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" letter-spacing="2" font-weight="600" opacity="0.8">PHASE 4</text>
-      <text x="737" y="82" text-anchor="middle" font-family="Playfair Display,serif" font-size="15" fill="white" font-weight="700">Validate</text>
-      <text x="737" y="100" text-anchor="middle" font-size="10" fill="white" opacity="0.75">plan + security</text>
-      <rect x="685" y="110" width="50" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="710" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">risk</text>
-      <rect x="741" y="110" width="50" height="16" rx="8" fill="white" opacity="0.15"/>
-      <text x="766" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="white" opacity="0.9">PR</text>
-
-      <!-- Agent detail cards below -->
-      <!-- Analyzer agents -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="20" y="170" width="180" height="60" rx="6" fill="white" stroke="#C4283A" stroke-width="1"/>
-      </g>
-      <rect x="20" y="170" width="180" height="4" rx="2" fill="#C4283A"/>
-      <text x="110" y="192" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A" font-weight="600">tf-consumer-uplift-analyzer</text>
-      <text x="110" y="208" text-anchor="middle" font-size="10" fill="#6B6B6B">x3 parallel: diff, impact, security</text>
-      <text x="110" y="222" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#9A7B2D">MCP: get_private_module_details</text>
-
-      <!-- Design agent (reused) -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="225" y="170" width="180" height="60" rx="6" fill="white" stroke="#6B3FA0" stroke-width="1"/>
-      </g>
-      <rect x="225" y="170" width="180" height="4" rx="2" fill="#6B3FA0"/>
-      <text x="315" y="192" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#6B3FA0" font-weight="600">tf-consumer-design</text>
-      <text x="315" y="208" text-anchor="middle" font-size="10" fill="#6B6B6B">reused with uplift args</text>
-      <text x="315" y="222" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#B87333">uplift-design-template.md</text>
-
-      <!-- Developer agent (reused) -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="485" y="170" width="160" height="60" rx="6" fill="white" stroke="#1A6B7A" stroke-width="1"/>
-      </g>
-      <rect x="485" y="170" width="160" height="4" rx="2" fill="#1A6B7A"/>
-      <text x="565" y="192" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1A6B7A" font-weight="600">tf-consumer-developer</text>
-      <text x="565" y="208" text-anchor="middle" font-size="10" fill="#6B6B6B">reused with UPLIFT MODE</text>
-      <text x="565" y="222" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2D7A4F">version + vars + outputs</text>
-
-      <!-- Validator agent (reused) -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="670" y="170" width="135" height="60" rx="6" fill="white" stroke="#2D7A4F" stroke-width="1"/>
-      </g>
-      <rect x="670" y="170" width="135" height="4" rx="2" fill="#2D7A4F"/>
-      <text x="737" y="192" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F" font-weight="600">tf-consumer-validator</text>
-      <text x="737" y="208" text-anchor="middle" font-size="10" fill="#6B6B6B">reused, uplift instructions</text>
-      <text x="737" y="222" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A">risk + quality >= 7.0</text>
-
-      <!-- Connecting lines from phases to agents -->
-      <line x1="110" y1="144" x2="110" y2="170" stroke="#C4283A" stroke-width="1" stroke-dasharray="4 2" opacity="0.3"/>
-      <line x1="315" y1="144" x2="315" y2="170" stroke="#6B3FA0" stroke-width="1" stroke-dasharray="4 2" opacity="0.3"/>
-      <line x1="565" y1="144" x2="565" y2="170" stroke="#1A6B7A" stroke-width="1" stroke-dasharray="4 2" opacity="0.3"/>
-      <line x1="737" y1="144" x2="737" y2="170" stroke="#2D7A4F" stroke-width="1" stroke-dasharray="4 2" opacity="0.3"/>
-
-      <!-- Artifact flow bar -->
-      <g filter="url(#sdd-shadow)">
-        <rect x="20" y="256" width="785" height="36" rx="6" fill="#F5F3EF" stroke="#E0DCD4" stroke-width="1"/>
-      </g>
-      <text x="410" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A" letter-spacing="1.5">ARTIFACTS: impact report &rarr; consumer-uplift-design.md &rarr; adapted .tf files &rarr; PR + analysis summary</text>
-    </svg>
+  <div class="card-grid single">
+    <div class="ed-card">
+      <h3>Single Workflow, Two Entry Points</h3>
+      <p>The <code>terraform-consumer-uplift.yml</code> workflow has two trigger sections. Jobs 1-4 run on <code>pull_request</code> events (automated). The interactive job runs on <code>issue_comment</code> when <code>@claude</code> is mentioned. Both share the same checkout, MCP config, and agent context.</p>
+      <p style="margin-top:8px">When <code>@claude</code> pushes code changes to the PR branch, it re-triggers Jobs 1-4 automatically (via <code>synchronize</code> event). This creates a natural re-validation loop: human asks for help &rarr; Claude adapts code &rarr; pipeline re-validates &rarr; decision updates.</p>
+    </div>
   </div>
 </div>
 
@@ -708,7 +662,7 @@ body {
 <div class="chapter-divider" id="decision-section">
   <div class="chapter-number">Risk Assessment</div>
   <h2 class="chapter-title">Decision Matrix</h2>
-  <p class="chapter-subtitle">Risk classification drives automated decisions in CI mode and informs reviewers in interactive mode</p>
+  <p class="chapter-subtitle">Embedded in the agent prompt and enforced via <code>--json-schema</code> structured output</p>
 </div>
 
 <div class="subsection revealed">
@@ -757,23 +711,56 @@ body {
     </tr>
   </table>
 
-  <div class="subsection-title" style="margin-top:28px">Key Principles</div>
   <div class="card-grid">
     <div class="ed-card">
       <h3>Never Auto-Merge Majors</h3>
-      <p>Major version bumps always require human review, even with zero breaking changes detected. The semantic version signal itself warrants attention.</p>
+      <p>Major version bumps always require human review, even with zero breaking changes detected.</p>
     </div>
     <div class="ed-card">
       <h3>DESTROY Escalates</h3>
-      <p>Any resource destruction in the plan escalates to at minimum NEEDS-REVIEW. Infrastructure deletion demands human oversight.</p>
+      <p>Any resource destruction in the plan escalates to at minimum NEEDS-REVIEW.</p>
     </div>
     <div class="ed-card">
       <h3>Conservative Bias</h3>
-      <p>When uncertain, the system recommends <code>needs-review</code> over <code>auto-merge</code>. False positives are preferable to missed breaking changes.</p>
+      <p>When uncertain, the system recommends <code>needs-review</code> over <code>auto-merge</code>.</p>
     </div>
     <div class="ed-card">
       <h3>Security Trumps Semver</h3>
-      <p>Security findings of HIGH or above always escalate regardless of version type. IAM, encryption, and exposure changes get special scrutiny.</p>
+      <p>Security findings of HIGH or above always escalate regardless of version type.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== POST-MERGE APPLY ===== -->
+<div class="chapter-divider" id="apply-section">
+  <div class="chapter-number">Post-Merge</div>
+  <h2 class="chapter-title">Apply & Rollback</h2>
+  <p class="chapter-subtitle">Separate workflow triggers on merge to main. Includes structured rollback on failure.</p>
+</div>
+
+<div class="subsection revealed">
+  <div class="card-grid">
+    <div class="ed-card" style="border-top: 3px solid var(--green)">
+      <h3>Success Path</h3>
+      <p>Upload config tarball &rarr; <code>POST /api/v2/runs</code> &rarr; poll until applied &rarr; confirm run &rarr; comment results on merged PR.</p>
+      <div class="node-row" style="margin-top:8px">
+        <span class="node node-script">applied</span>
+        <span class="node node-ref">PR comment</span>
+      </div>
+    </div>
+    <div class="ed-card" style="border-top: 3px solid var(--red)">
+      <h3>Failure Path (D6)</h3>
+      <p>Comment error details on PR &rarr; create <code>incident:apply-failure</code> issue &rarr; auto-generate draft rollback PR (<code>git revert</code>) &rarr; tag CODEOWNERS.</p>
+      <div class="node-row" style="margin-top:8px">
+        <span class="node node-cmd">incident issue</span>
+        <span class="node node-agent">rollback PR</span>
+      </div>
+    </div>
+  </div>
+  <div class="card-grid single">
+    <div class="ed-card">
+      <h3>Why No Auto-Revert</h3>
+      <p>Auto-reverting merges at enterprise scale is dangerous -- it can cascade through dependent workspaces, trigger unexpected destroys, and bypass change management. The rollback PR goes through the normal pipeline (classify &rarr; validate &rarr; plan) to ensure the revert is safe before merging. Human control is preserved throughout.</p>
     </div>
   </div>
 </div>
@@ -781,14 +768,11 @@ body {
 <!-- ===== ARTIFACTS ===== -->
 <div class="chapter-divider" id="artifacts-section">
   <div class="chapter-number">Implementation</div>
-  <h2 class="chapter-title">Artifacts &amp; Integration</h2>
-  <p class="chapter-subtitle">New components and their integration with the existing SDD framework</p>
+  <h2 class="chapter-title">Artifacts</h2>
+  <p class="chapter-subtitle">Everything needed to implement the consumer uplift pipeline</p>
 </div>
 
 <div class="subsection revealed">
-  <div class="subsection-title">New Artifacts</div>
-  <div class="subsection-desc">Components created for the consumer uplift workflow</div>
-
   <table class="artifact-table">
     <tr>
       <th>File</th>
@@ -796,39 +780,29 @@ body {
       <th>Purpose</th>
     </tr>
     <tr>
-      <td>.claude/skills/tf-consumer-uplift/SKILL.md</td>
-      <td><span class="node node-skill">skill</span></td>
-      <td>Orchestrator for interactive 4-phase uplift workflow</td>
-    </tr>
-    <tr>
-      <td>.claude/agents/tf-consumer-uplift-analyzer.md</td>
-      <td><span class="node node-agent">agent</span></td>
-      <td>Module interface diff, consumer impact, security review</td>
-    </tr>
-    <tr>
-      <td>.foundations/templates/consumer-uplift-design-template.md</td>
-      <td><span class="node node-template">template</span></td>
-      <td>Design document for uplift scenarios (6 sections)</td>
-    </tr>
-    <tr>
       <td>.github/workflows/terraform-consumer-uplift.yml</td>
       <td><span class="node node-script">workflow</span></td>
-      <td>4-job CI pipeline: classify, validate, analyze, decide</td>
+      <td>Main pipeline (4 jobs) + @claude interactive (1 job)</td>
     </tr>
     <tr>
       <td>.github/workflows/terraform-consumer-uplift-apply.yml</td>
       <td><span class="node node-script">workflow</span></td>
-      <td>Post-merge apply to HCP Terraform</td>
+      <td>Post-merge apply + rollback on failure</td>
+    </tr>
+    <tr>
+      <td>.github/workflows/module-update-tracker.yml</td>
+      <td><span class="node node-ref">optional</span></td>
+      <td>Phase D: Self-updating dashboard issue for pending upgrades</td>
     </tr>
     <tr>
       <td>.github/agents/module-upgrade-analyst.md</td>
       <td><span class="node node-agent">agent</span></td>
-      <td>Claude Code Action prompt for CI analysis</td>
+      <td>Agent prompt for claude-code-action analysis</td>
     </tr>
     <tr>
       <td>.foundations/scripts/bash/classify-version-bump.sh</td>
       <td><span class="node node-script">script</span></td>
-      <td>Parse git diff to classify semver bump type</td>
+      <td>Parse git diff, classify semver bump type</td>
     </tr>
     <tr>
       <td>.foundations/scripts/bash/scan-module-versions.sh</td>
@@ -838,57 +812,49 @@ body {
     <tr>
       <td>.github/dependabot.yml</td>
       <td><span class="node node-ref">config</span></td>
-      <td>Private registry module scanning configuration</td>
+      <td>Private registry module scanning (daily)</td>
+    </tr>
+    <tr>
+      <td>.mcp-ci.json</td>
+      <td><span class="node node-mcp">config</span></td>
+      <td>Terraform MCP server for CI (npx, no Docker)</td>
     </tr>
   </table>
 
-  <div class="subsection-title" style="margin-top:28px">Reused Components</div>
-  <div class="subsection-desc">Existing SDD components leveraged with mode-specific arguments</div>
+  <div class="subsection-title" style="margin-top:24px">Implementation Phases</div>
 
   <div class="card-grid triple">
-    <div class="ed-card">
-      <h3>tf-consumer-developer</h3>
-      <p>Reused with <code>UPLIFT MODE</code> in $ARGUMENTS. Updates version constraints, adds variables, fixes output references.</p>
-    </div>
-    <div class="ed-card">
-      <h3>tf-consumer-validator</h3>
-      <p>Reused with uplift instructions. Focuses on regression analysis, plan diff review, and risk classification.</p>
-    </div>
-    <div class="ed-card">
-      <h3>Consumer Constitution</h3>
-      <p>No changes needed. Uplift produces consumer code governed by the same rules. Section 4.3 already covers version management.</p>
-    </div>
-  </div>
-
-  <div class="subsection-title" style="margin-top:28px">Implementation Order</div>
-  <div class="subsection-desc">Three phases of incremental delivery</div>
-
-  <div class="card-grid triple">
-    <div class="ed-card" style="border-top: 3px solid var(--purple)">
-      <h3>Phase A: Foundation</h3>
-      <ul>
-        <li>Uplift design template</li>
-        <li>Uplift analyzer agent</li>
-        <li>Orchestrator skill</li>
-        <li>AGENTS.md + CLAUDE.md updates</li>
-      </ul>
-    </div>
     <div class="ed-card" style="border-top: 3px solid var(--cyan)">
-      <h3>Phase B: CI Pipeline</h3>
+      <h3>Phase A: Scripts</h3>
       <ul>
         <li>classify-version-bump.sh</li>
         <li>scan-module-versions.sh</li>
-        <li>CI agent definition</li>
-        <li>GitHub Actions workflows</li>
-        <li>Dependabot config</li>
+        <li>.mcp-ci.json</li>
+        <li>dependabot.yml</li>
+      </ul>
+    </div>
+    <div class="ed-card" style="border-top: 3px solid var(--purple)">
+      <h3>Phase B: Workflows</h3>
+      <ul>
+        <li>module-upgrade-analyst.md</li>
+        <li>consumer-uplift.yml</li>
+        <li>consumer-uplift-apply.yml</li>
       </ul>
     </div>
     <div class="ed-card" style="border-top: 3px solid var(--green)">
-      <h3>Phase C: Documentation</h3>
+      <h3>Phase C: Docs</h3>
       <ul>
-        <li>Visual workflow diagram</li>
-        <li>Playground integration</li>
-        <li>Usage examples</li>
+        <li>Visual diagram (this page)</li>
+        <li>AGENTS.md updates</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card-grid single" style="margin-top:0">
+    <div class="ed-card" style="border-top: 3px solid var(--text-caption); opacity: 0.7">
+      <h3>Phase D: Optional Enhancements (Deferred)</h3>
+      <ul>
+        <li>module-update-tracker.yml (dashboard issue)</li>
+        <li>Copilot ruleset configuration guide</li>
       </ul>
     </div>
   </div>
@@ -896,7 +862,7 @@ body {
 
 <!-- Footer -->
 <div style="text-align:center; padding: 40px 28px 0; max-width:var(--max-w); margin:0 auto; border-top: 1px solid var(--border)">
-  <p style="font-family:var(--mono); font-size:10px; letter-spacing:1.5px; color:var(--text-caption); text-transform:uppercase">Consumer Module Uplift &mdash; Use Case 1 of Issue #3</p>
+  <p style="font-family:var(--mono); font-size:10px; letter-spacing:1.5px; color:var(--text-caption); text-transform:uppercase">Consumer Module Uplift -- Use Case 1 of Issue #3</p>
   <p style="font-size:13px; color:var(--text-caption); margin-top:4px">Part of the <span style="color:var(--red); font-weight:600">HCP Terraform x AI Agents</span> SDD framework</p>
 </div>
 
@@ -908,7 +874,7 @@ const observer = new IntersectionObserver(entries => {
 document.querySelectorAll('.subsection').forEach(el => observer.observe(el));
 
 // Active header link tracking
-const sections = ['landing', 'pipeline-section', 'interactive-section', 'decision-section', 'artifacts-section'];
+const sections = ['landing', 'pipeline-section', 'escalation-section', 'decision-section', 'apply-section', 'artifacts-section'];
 window.addEventListener('scroll', () => {
   const links = document.querySelectorAll('.header-link');
   let current = sections[0];
@@ -920,12 +886,6 @@ window.addEventListener('scroll', () => {
     link.classList.toggle('active', link.getAttribute('href') === '#' + current);
   });
 });
-
-// Mode card toggle
-function toggleMode(card, mode) {
-  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
-  card.classList.add('active');
-}
 </script>
 </body>
 </html>
