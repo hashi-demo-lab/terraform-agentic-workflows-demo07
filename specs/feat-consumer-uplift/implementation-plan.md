@@ -85,7 +85,7 @@ Dependabot PR / Fallback Scanner PR
        |
        v  (on merge to main)
 ┌──────────────────────────────────────────────────┐
-│  terraform-consumer-uplift-apply.yml             │
+│  terraform-apply.yml             │
 │  Upload config → POST /api/v2/runs               │
 │  Poll completion → comment results on PR         │
 └──────────────────────────────────────────────────┘
@@ -157,7 +157,7 @@ Security finding      NEEDS-REVIEW    NEEDS-REVIEW    BREAKING-CHANGE
 | File | Purpose |
 |------|---------|
 | `.github/workflows/terraform-consumer-uplift.yml` | Unified workflow: classify, validate, AI analysis, decision + @claude interactive |
-| `.github/workflows/terraform-consumer-uplift-apply.yml` | Post-merge apply to HCP Terraform + rollback on failure |
+| `.github/workflows/terraform-apply.yml` | Post-merge apply to HCP Terraform + rollback on failure |
 | `.github/workflows/module-update-tracker.yml` | *(Phase D — optional)* Self-updating dashboard issue aggregating pending upgrades |
 
 **Key workflow design:**
@@ -196,7 +196,7 @@ The agent prompt defines the 5 sub-analyses and decision matrix. It's loaded by 
 
 | File | Purpose |
 |------|---------|
-| `.github/dependabot.yml` | Private registry module scanning (daily schedule) |
+| `.github/dependabot.yml` | Private registry module scanning (monthly schedule) |
 | `.mcp-ci.json` | MCP server config for CI (`npx`, no Docker) |
 
 **Dependabot config:**
@@ -211,7 +211,7 @@ updates:
   - package-ecosystem: terraform
     directory: "/"
     schedule:
-      interval: daily
+      interval: monthly
     registries:
       - terraform-private
 ```
@@ -400,7 +400,7 @@ Self-updating GitHub issue that aggregates all pending Dependabot PRs:
 
 5. Create `module-upgrade-analyst.md` CI agent definition
 6. Create `terraform-consumer-uplift.yml` (main pipeline + interactive)
-7. Create `terraform-consumer-uplift-apply.yml` (post-merge apply + rollback on failure)
+7. Create `terraform-apply.yml` (post-merge apply + rollback on failure)
 
 ### Phase C: Documentation & Diagram
 
