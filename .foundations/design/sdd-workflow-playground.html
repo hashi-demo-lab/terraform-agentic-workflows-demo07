@@ -3612,6 +3612,172 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 <div class="subsection" id="guardrails-agent-identity" data-sub="Agent Identity">
   <h3 class="subsection-title">Agent Identity &amp; Workload Federation</h3>
   <p class="subsection-desc">Agents authenticate via OIDC workload identity federation — no long-lived credentials are stored or passed. HCP Terraform issues short-lived tokens scoped to a single workspace run, ensuring agents operate with minimal privilege and zero static secrets.</p>
+  <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
+    <svg viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="aidwf-dots" width="16" height="16" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="0.5" fill="#E0DCD4" opacity="0.5"/>
+        </pattern>
+        <filter id="aidwf-shadow" x="-5%" y="-5%" width="110%" height="120%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/>
+        </filter>
+      </defs>
+
+      <!-- Background -->
+      <rect x="0" y="0" width="680" height="440" rx="10" fill="#FAFAF8"/>
+      <rect x="0" y="0" width="680" height="440" rx="10" fill="url(#aidwf-dots)"/>
+      <rect x="0" y="0" width="680" height="440" rx="10" fill="none" stroke="#E0DCD4" stroke-width="1"/>
+
+      <text x="340" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#DC477D" font-weight="700" letter-spacing="1.5">AGENT IDENTITY &amp; WORKLOAD FEDERATION</text>
+
+      <!-- AI Agent -->
+      <rect x="240" y="34" width="200" height="36" rx="8" fill="#DC477D" filter="url(#aidwf-shadow)">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite"/>
+      </rect>
+      <text x="340" y="57" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="white" font-weight="700">AI AGENT</text>
+
+      <!-- TFE API badge -->
+      <rect x="262" y="76" width="156" height="20" rx="4" fill="rgba(220,71,125,0.08)" stroke="#DC477D" stroke-width="0.6"/>
+      <text x="340" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#DC477D" font-weight="600" letter-spacing="0.5">TFE API ONLY — NO SECRETS</text>
+
+      <!-- Arrow: Agent → Workspace -->
+      <line x1="340" y1="96" x2="340" y2="120" stroke="#DC477D" stroke-width="0.8" opacity="0.4"/>
+      <polygon points="336,117 340,124 344,117" fill="#DC477D" opacity="0.5"/>
+      <circle r="3" fill="#DC477D" opacity="0">
+        <animateMotion path="M340,96 L340,120" dur="1.6s" repeatCount="indefinite" begin="0s"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="1.6s" repeatCount="indefinite" begin="0s"/>
+      </circle>
+
+      <!-- HCP Terraform Workspace -->
+      <rect x="170" y="126" width="340" height="46" rx="6" fill="#1A6B7A" filter="url(#aidwf-shadow)">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="0.3s"/>
+      </rect>
+      <text x="340" y="147" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="white" font-weight="700">HCP TERRAFORM WORKSPACE</text>
+      <text x="340" y="164" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="9" fill="rgba(255,255,255,0.7)">Project-scoped, team-bound, workload identity per workspace</text>
+
+      <!-- Dynamic credentials badge -->
+      <rect x="230" y="178" width="220" height="20" rx="4" fill="rgba(26,107,122,0.08)" stroke="#1A6B7A" stroke-width="0.6">
+        <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" begin="0.6s"/>
+      </rect>
+      <text x="340" y="192" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#1A6B7A" font-weight="600">DYNAMIC PROVIDER CREDENTIALS</text>
+
+      <!-- Arrow: Workspace → OIDC -->
+      <line x1="340" y1="198" x2="340" y2="218" stroke="#6B3FA0" stroke-width="0.8" opacity="0.4"/>
+      <polygon points="336,215 340,222 344,215" fill="#6B3FA0" opacity="0.5"/>
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion path="M340,198 L340,218" dur="1.6s" repeatCount="indefinite" begin="0.4s"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="1.6s" repeatCount="indefinite" begin="0.4s"/>
+      </circle>
+
+      <!-- OIDC Federation -->
+      <rect x="210" y="224" width="260" height="36" rx="8" fill="#6B3FA0" filter="url(#aidwf-shadow)">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="0.6s"/>
+      </rect>
+      <text x="340" y="247" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="white" font-weight="700">OIDC FEDERATION</text>
+
+      <!-- Short-lived tokens badge -->
+      <rect x="204" y="266" width="272" height="18" rx="4" fill="rgba(107,63,160,0.08)" stroke="#6B3FA0" stroke-width="0.6"/>
+      <text x="340" y="279" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6B3FA0" font-weight="600">SHORT-LIVED TOKENS EXCHANGED PER RUN</text>
+
+      <!-- Fan-out lines to 4 providers -->
+      <line x1="280" y1="284" x2="100" y2="316" stroke="#6B3FA0" stroke-width="0.8" opacity="0.4"/>
+      <line x1="310" y1="284" x2="270" y2="316" stroke="#6B3FA0" stroke-width="0.8" opacity="0.4"/>
+      <line x1="370" y1="284" x2="420" y2="316" stroke="#6B3FA0" stroke-width="0.8" opacity="0.4"/>
+      <line x1="410" y1="284" x2="580" y2="316" stroke="#6B3FA0" stroke-width="0.8" opacity="0.4"/>
+
+      <!-- Dispatch particles (OIDC assertion down to providers) -->
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion path="M280,284 L100,316" dur="1.6s" repeatCount="indefinite" begin="0.8s"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="1.6s" repeatCount="indefinite" begin="0.8s"/>
+      </circle>
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion path="M310,284 L270,316" dur="1.6s" repeatCount="indefinite" begin="1.0s"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="1.6s" repeatCount="indefinite" begin="1.0s"/>
+      </circle>
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion path="M370,284 L420,316" dur="1.6s" repeatCount="indefinite" begin="1.2s"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="1.6s" repeatCount="indefinite" begin="1.2s"/>
+      </circle>
+      <circle r="3" fill="#6B3FA0" opacity="0">
+        <animateMotion path="M410,284 L580,316" dur="1.6s" repeatCount="indefinite" begin="1.4s"/>
+        <animate attributeName="opacity" values="0;0.8;0" dur="1.6s" repeatCount="indefinite" begin="1.4s"/>
+      </circle>
+
+      <!-- Provider 1: AWS -->
+      <rect x="30" y="318" width="140" height="44" rx="6" fill="#1A6B7A" filter="url(#aidwf-shadow)">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="1.0s"/>
+      </rect>
+      <text x="100" y="337" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="white" font-weight="700">AWS</text>
+      <text x="100" y="354" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">AssumeRoleWithWebIdentity</text>
+
+      <!-- Provider 2: Azure -->
+      <rect x="190" y="318" width="140" height="44" rx="6" fill="#627EEF" filter="url(#aidwf-shadow)">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="1.2s"/>
+      </rect>
+      <text x="260" y="337" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="white" font-weight="700">Azure</text>
+      <text x="260" y="354" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">Federated credential</text>
+
+      <!-- Provider 3: GCP -->
+      <rect x="350" y="318" width="140" height="44" rx="6" fill="#2D7A4F" filter="url(#aidwf-shadow)">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="1.4s"/>
+      </rect>
+      <text x="420" y="337" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="white" font-weight="700">GCP</text>
+      <text x="420" y="354" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">Workload identity pool</text>
+
+      <!-- Provider 4: HashiCorp Vault -->
+      <rect x="510" y="318" width="140" height="44" rx="6" fill="#C4283A" filter="url(#aidwf-shadow)">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="3.5s" repeatCount="indefinite" begin="1.6s"/>
+      </rect>
+      <text x="580" y="337" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="white" font-weight="700">HashiCorp Vault</text>
+      <text x="580" y="354" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">JWT/OIDC auth method</text>
+
+      <!-- Credential return badges -->
+      <rect x="55" y="366" width="90" height="18" rx="4" fill="rgba(26,107,122,0.08)" stroke="#1A6B7A" stroke-width="0.6">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="4s" repeatCount="indefinite" begin="1.8s"/>
+      </rect>
+      <text x="100" y="379" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#1A6B7A" font-weight="600">short-lived</text>
+
+      <rect x="215" y="366" width="90" height="18" rx="4" fill="rgba(98,126,239,0.08)" stroke="#627EEF" stroke-width="0.6">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="4s" repeatCount="indefinite" begin="2.0s"/>
+      </rect>
+      <text x="260" y="379" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#627EEF" font-weight="600">short-lived</text>
+
+      <rect x="375" y="366" width="90" height="18" rx="4" fill="rgba(45,122,79,0.08)" stroke="#2D7A4F" stroke-width="0.6">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="4s" repeatCount="indefinite" begin="2.2s"/>
+      </rect>
+      <text x="420" y="379" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2D7A4F" font-weight="600">short-lived</text>
+
+      <rect x="535" y="366" width="90" height="18" rx="4" fill="rgba(196,40,58,0.08)" stroke="#C4283A" stroke-width="0.6">
+        <animate attributeName="opacity" values="0.88;1;0.88" dur="4s" repeatCount="indefinite" begin="2.4s"/>
+      </rect>
+      <text x="580" y="379" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#C4283A" font-weight="600">short-lived</text>
+
+      <!-- Shared credential bar -->
+      <rect x="55" y="390" width="570" height="2" rx="1" fill="#6B3FA0" opacity="0.15"/>
+
+      <!-- Return particles (short-lived credentials back up to OIDC zone) -->
+      <circle r="2.5" fill="#1A6B7A" opacity="0">
+        <animateMotion path="M100,362 L100,318 L280,284" dur="2.2s" repeatCount="indefinite" begin="2s"/>
+        <animate attributeName="opacity" values="0;0.7;0.7;0" dur="2.2s" repeatCount="indefinite" begin="2s"/>
+      </circle>
+      <circle r="2.5" fill="#627EEF" opacity="0">
+        <animateMotion path="M260,362 L260,318 L310,284" dur="2.2s" repeatCount="indefinite" begin="2.3s"/>
+        <animate attributeName="opacity" values="0;0.7;0.7;0" dur="2.2s" repeatCount="indefinite" begin="2.3s"/>
+      </circle>
+      <circle r="2.5" fill="#2D7A4F" opacity="0">
+        <animateMotion path="M420,362 L420,318 L370,284" dur="2.2s" repeatCount="indefinite" begin="2.6s"/>
+        <animate attributeName="opacity" values="0;0.7;0.7;0" dur="2.2s" repeatCount="indefinite" begin="2.6s"/>
+      </circle>
+      <circle r="2.5" fill="#C4283A" opacity="0">
+        <animateMotion path="M580,362 L580,318 L410,284" dur="2.2s" repeatCount="indefinite" begin="2.9s"/>
+        <animate attributeName="opacity" values="0;0.7;0.7;0" dur="2.2s" repeatCount="indefinite" begin="2.9s"/>
+      </circle>
+
+      <!-- Caption bar -->
+      <rect x="80" y="406" width="520" height="14" rx="7" fill="#F5F3EF"/>
+      <text x="340" y="416" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#8A8A8A" letter-spacing="1.5">ZERO LONG-LIVED CREDENTIALS &#x2014; AGENT NEVER TOUCHES CLOUD SECRETS</text>
+    </svg>
+  </div>
   <div class="card-grid">
     <details class="ed-card">
       <summary>
