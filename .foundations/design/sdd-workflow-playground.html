@@ -3010,7 +3010,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
     <text x="572" y="403" font-family="Source Sans 3,sans-serif" font-size="9" fill="#6B6B6B">controls at deploy</text>
 
     <!-- Principle statement -->
-    <text x="410" y="436" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#4A4A48" font-weight="600">Every agent action passes through at least one guardrail before reaching infrastructure.</text>
+    <text x="410" y="436" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="11" fill="#4A4A48" font-weight="600">Every agent action passes through a layered guardrail system before reaching infrastructure.</text>
 
     <!-- === Caption bar === -->
     <rect x="210" y="454" width="400" height="16" rx="8" fill="#F5F3EF"/>
@@ -4958,7 +4958,7 @@ Step 12: terraform test + fmt + trivy + terraform-docs (validate phase)</pre>
 
 <div class="subsection" id="sdd-constitutions" data-sub="Constitutions">
   <h3 class="subsection-title">Constitutions</h3>
-  <p class="subsection-desc">Non-negotiable rules loaded into every agent's context — constitutions encode your team's standards so agents enforce them automatically on every invocation.</p>
+  <p class="subsection-desc">Non-negotiable rules loaded into every agent's context, constitutions encode your team's standards so agents enforce them automatically on every invocation. Constitution rules are re-enforced by each subagent and validated against during reporting.</p>
   <div class="svg-diagram" style="max-width:680px;margin:24px auto 32px;padding:0 28px">
     <svg viewBox="0 0 680 480" xmlns="http://www.w3.org/2000/svg">
       <defs>
