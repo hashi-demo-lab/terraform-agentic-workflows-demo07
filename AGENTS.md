@@ -10,6 +10,27 @@ Operational rules for the orchestrator during workflow execution. Everything els
 | `/tf-provider-plan` + `/tf-provider-implement` | tf-provider-research, tf-provider-design, tf-provider-developer, tf-provider-validator | `specs/{FEATURE}/provider-design-{resource}.md` | `.foundations/memory/provider-constitution.md` |
 | `/tf-consumer-plan` + `/tf-consumer-implement` | tf-consumer-research, tf-consumer-design, tf-consumer-developer, tf-consumer-validator | `specs/{FEATURE}/consumer-design.md` | `.foundations/memory/consumer-constitution.md` |
 
+### Consumer Module Uplift (CI Pipeline)
+
+Automated pipeline for private registry module version upgrades. Runs entirely in GitHub Actions — no CLI skill.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Main pipeline | `.github/workflows/terraform-consumer-uplift.yml` | Classify, validate, AI analysis, decision + @claude interactive |
+| Post-merge apply | `.github/workflows/terraform-apply.yml` | Apply to HCP Terraform + rollback on failure |
+| CI agent prompt | `.github/agents/module-upgrade-analyst.md` | 5-step analysis: interface diff, config adaptation, security review, plan analysis, recommendation |
+| Version classifier | `.foundations/scripts/bash/classify-version-bump.sh` | Parse git diff for semver classification |
+| Fallback scanner | `.foundations/scripts/bash/scan-module-versions.sh` | TFC API scanner for modules Dependabot misses |
+| CI MCP config | `.mcp-ci.json` | Terraform MCP server config for CI (npx, no Docker) |
+| Dependabot | `.github/dependabot.yml` | Private registry module version detection |
+| Visual diagram | `.foundations/design/consumer-uplift-workflow.html` | Interactive architecture diagram |
+
+**Decision matrix**: Risk classification (low/medium/high/critical) drives auto-merge, needs-review, or breaking-change decisions. See `specs/feat-consumer-uplift/implementation-plan.md` Section 4.
+
+**Two-pass validation**: If the AI adapts code (step 5B), the pipeline re-runs to validate the adapted code before making a final decision.
+
+**Rollback on apply failure**: Creates an incident issue + draft revert PR. Does NOT auto-revert merges.
+
 ## Context Management
 
 These rules apply to ALL three workflows. Replace `{workflow}` with `module`, `provider`, or `consumer` as appropriate.

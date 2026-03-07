@@ -1,0 +1,492 @@
+name: "Terraform Consumer Module Uplift"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**/*.tf"
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: consumer-uplift-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+env:
+  TF_VAR_FILE: ""
+  TF_WORKSPACE: ""
+  TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+
+jobs:
+  # ─────────────────────────────────────────────────
+  # Job 1: CLASSIFY — Parse git diff, detect semver type
+  # ─────────────────────────────────────────────────
+  classify:
+    name: "Classify Version Bump"
+    if: >-
+      github.event_name == 'pull_request' &&
+      (startsWith(github.head_ref, 'dependabot/terraform/') ||
+       startsWith(github.head_ref, 'module-update/'))
+    runs-on: ubuntu-latest
+    outputs:
+      version_type: ${{ steps.classify.outputs.version_type }}
+      modules_changed: ${{ steps.classify.outputs.modules_changed }}
+      module_count: ${{ steps.classify.outputs.module_count }}
+      is_dependabot: ${{ steps.classify.outputs.is_dependabot }}
+      should_continue: ${{ steps.classify.outputs.should_continue }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify version bump
+        id: classify
+        run: |
+          chmod +x .foundations/scripts/bash/classify-version-bump.sh
+          RESULT=$(bash .foundations/scripts/bash/classify-version-bump.sh \
+            --base "origin/${{ github.base_ref }}" \
+            --head "HEAD") || {
+            EXIT_CODE=$?
+            if [[ $EXIT_CODE -eq 2 ]]; then
+              echo "No module version changes detected"
+              echo "should_continue=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Classification failed with exit code $EXIT_CODE"
+            exit 1
+          }
+
+          echo "version_type=$(echo "$RESULT" | jq -r '.version_type')" >> "$GITHUB_OUTPUT"
+          echo "modules_changed=$(echo "$RESULT" | jq -c '.modules_changed')" >> "$GITHUB_OUTPUT"
+          echo "module_count=$(echo "$RESULT" | jq -r '.module_count')" >> "$GITHUB_OUTPUT"
+          echo "is_dependabot=$(echo "$RESULT" | jq -r '.is_dependabot')" >> "$GITHUB_OUTPUT"
+          echo "should_continue=true" >> "$GITHUB_OUTPUT"
+
+          echo "### Classification Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version Type | $(echo "$RESULT" | jq -r '.version_type') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Module Count | $(echo "$RESULT" | jq -r '.module_count') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependabot | $(echo "$RESULT" | jq -r '.is_dependabot') |" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─────────────────────────────────────────────────
+  # Job 2: VALIDATE — Deterministic Terraform checks
+  # ─────────────────────────────────────────────────
+  validate:
+    name: "Validate Terraform"
+    needs: classify
+    if: needs.classify.outputs.should_continue == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      plan_exitcode: ${{ steps.plan.outputs.exitcode }}
+      plan_summary: ${{ steps.plan-summary.outputs.summary }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          cli_config_file: ${{ steps.tfe-creds.outputs.credentials_file }}
+
+      - name: Configure TFE credentials
+        id: tfe-creds
+        run: |
+          CREDS_FILE="$HOME/.terraformrc"
+          cat > "$CREDS_FILE" <<TFRC
+          credentials "app.terraform.io" {
+            token = "${TFE_TOKEN}"
+          }
+          TFRC
+          echo "credentials_file=${CREDS_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: TFLint
+        uses: terraform-linters/setup-tflint@v4
+      - run: |
+          tflint --init
+          tflint --format=compact
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -detailed-exitcode -input=false -out=tfplan 2>&1 | tee plan_output.txt
+          PLAN_EXIT=$?
+          set -e
+
+          echo "exitcode=${PLAN_EXIT}" >> "$GITHUB_OUTPUT"
+
+          case $PLAN_EXIT in
+            0)
+              echo "### Plan: No Changes" >> "$GITHUB_STEP_SUMMARY"
+              echo "The workspace already reflects this module version." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            1)
+              echo "### Plan: Error" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              tail -20 plan_output.txt >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            2)
+              echo "### Plan: Changes Detected" >> "$GITHUB_STEP_SUMMARY"
+              terraform show -no-color tfplan > plan_readable.txt 2>&1 || true
+              ;;
+          esac
+
+          exit 0
+
+      - name: Upload plan artifact
+        if: steps.plan.outputs.exitcode == '2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: |
+            plan_output.txt
+            plan_readable.txt
+          retention-days: 5
+
+      - name: Parse plan summary
+        id: plan-summary
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          ADD=$(grep -c '# .* will be created' plan_readable.txt 2>/dev/null || echo 0)
+          CHANGE=$(grep -c '# .* will be updated' plan_readable.txt 2>/dev/null || echo 0)
+          DESTROY=$(grep -c '# .* will be destroyed' plan_readable.txt 2>/dev/null || echo 0)
+          REPLACE=$(grep -c '# .* must be replaced' plan_readable.txt 2>/dev/null || echo 0)
+
+          SUMMARY=$(jq -n \
+            --argjson add "$ADD" \
+            --argjson change "$CHANGE" \
+            --argjson destroy "$DESTROY" \
+            --argjson replace "$REPLACE" \
+            '{add: $add, change: $change, destroy: $destroy, replace: $replace, total: ($add + $change + $destroy + $replace)}')
+
+          echo "summary=$(echo "$SUMMARY" | jq -c '.')" >> "$GITHUB_OUTPUT"
+
+      - name: Handle no-changes (exit 0) — close PR
+        if: steps.plan.outputs.exitcode == '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `### No Changes Detected\n\nThe Terraform plan shows no infrastructure changes for this module version bump. This typically means the workspace already reflects the target version (applied via another path).\n\n**Action**: Closing this PR as no changes are needed.\n\n_If this is unexpected, re-open the PR and investigate._`
+            });
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              state: 'closed'
+            });
+
+      - name: Handle plan error (exit 1) — label breaking
+        if: steps.plan.outputs.exitcode == '1'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['breaking-change', 'risk:critical']
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `### Terraform Plan Failed\n\nThe plan command returned an error, indicating this module version bump introduces breaking changes that prevent planning.\n\n**Action**: This PR is blocked. Review the plan output in the workflow logs and use \`@claude\` on this PR for interactive analysis.\n\ncc @claude`
+            });
+
+  # ─────────────────────────────────────────────────
+  # Job 3: AI ANALYSIS — claude-code-action
+  # ─────────────────────────────────────────────────
+  ai-analysis:
+    name: "AI Analysis"
+    needs: [classify, validate]
+    if: needs.validate.outputs.plan_exitcode == '2'
+    runs-on: ubuntu-latest
+    outputs:
+      analysis_result: ${{ steps.parse-output.outputs.result }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
+      - name: Run Claude Analysis
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-6
+          max_turns: "15"
+          mcp_config: .mcp-ci.json
+          prompt: |
+            You are a Terraform module upgrade analyst. Analyze this PR and produce a structured JSON recommendation.
+
+            ## Context
+            - **Version type**: ${{ needs.classify.outputs.version_type }}
+            - **Modules changed**: ${{ needs.classify.outputs.modules_changed }}
+            - **Plan summary**: ${{ needs.validate.outputs.plan_summary }}
+            - **PR branch**: ${{ github.head_ref }}
+            - **Is Dependabot**: ${{ needs.classify.outputs.is_dependabot }}
+
+            ## Instructions
+            Read the agent definition at `.github/agents/module-upgrade-analyst.md` and follow its 5-step analysis process (5A through 5E).
+
+            The plan output is available at `plan_readable.txt` and `plan_output.txt`.
+
+            Produce your final answer as a JSON object matching the schema in the agent definition.
+
+            Important:
+            - If you push code changes (step 5B), set decision to "needs-revalidation"
+            - Be conservative: prefer "needs-review" over "auto-merge" when uncertain
+            - Never auto-merge major version bumps
+
+      - name: Parse structured output
+        id: parse-output
+        run: |
+          # Extract JSON from Claude's response
+          RESPONSE='${{ steps.claude.outputs.response }}'
+
+          # Try to parse JSON from the response
+          RESULT=$(echo "$RESPONSE" | grep -o '{[^}]*"decision"[^}]*}' | head -1) || true
+
+          if [[ -z "$RESULT" ]] || ! echo "$RESULT" | jq empty 2>/dev/null; then
+            echo "Warning: Could not parse structured JSON from AI response. Defaulting to needs-review." >&2
+            RESULT=$(jq -n '{
+              "decision": "needs-review",
+              "risk_level": "medium",
+              "version_type": "${{ needs.classify.outputs.version_type }}",
+              "breaking_changes": [],
+              "security_findings": [],
+              "plan_summary": ${{ needs.validate.outputs.plan_summary || '{"add":0,"change":0,"destroy":0,"replace":0,"total":0}' }},
+              "adaptations_applied": [],
+              "interface_diff": {"inputs_added":[],"inputs_removed":[],"inputs_changed":[],"outputs_added":[],"outputs_removed":[],"outputs_changed":[]},
+              "rationale": "JSON parse failure - defaulting to needs-review for safety"
+            }')
+          fi
+
+          echo "result=$(echo "$RESULT" | jq -c '.')" >> "$GITHUB_OUTPUT"
+
+  # ─────────────────────────────────────────────────
+  # Job 4: DECISION — Act on AI recommendation
+  # ─────────────────────────────────────────────────
+  decision:
+    name: "Decision"
+    needs: [classify, validate, ai-analysis]
+    if: needs.validate.outputs.plan_exitcode == '2'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse analysis result
+        id: parse
+        run: |
+          RESULT='${{ needs.ai-analysis.outputs.analysis_result }}'
+          echo "decision=$(echo "$RESULT" | jq -r '.decision')" >> "$GITHUB_OUTPUT"
+          echo "risk_level=$(echo "$RESULT" | jq -r '.risk_level')" >> "$GITHUB_OUTPUT"
+          echo "rationale=$(echo "$RESULT" | jq -r '.rationale')" >> "$GITHUB_OUTPUT"
+          echo "has_adaptations=$(echo "$RESULT" | jq '.adaptations_applied | length > 0')" >> "$GITHUB_OUTPUT"
+          echo "has_security=$(echo "$RESULT" | jq '[.security_findings[] | select(.severity == "high" or .severity == "critical")] | length > 0')" >> "$GITHUB_OUTPUT"
+
+      - name: Apply labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const decision = '${{ steps.parse.outputs.decision }}';
+            const riskLevel = '${{ steps.parse.outputs.risk_level }}';
+            const versionType = '${{ needs.classify.outputs.version_type }}';
+
+            const labels = [`risk:${riskLevel}`];
+
+            if (decision === 'auto-merge') labels.push('auto-merge');
+            else if (decision === 'needs-review') labels.push('needs-review');
+            else if (decision === 'needs-revalidation') labels.push('needs-revalidation');
+            else if (decision === 'breaking-change') labels.push('breaking-change');
+
+            labels.push(`version:${versionType}`);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: labels
+            });
+
+            // Update PR title with semver tag
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            let prefix = '';
+            if (decision === 'breaking-change') prefix = '[BREAKING] ';
+            else if (versionType === 'major') prefix = '[MAJOR] ';
+            else if (versionType === 'minor') prefix = '[minor] ';
+            else prefix = '[patch] ';
+
+            const currentTitle = pr.data.title;
+            if (!currentTitle.startsWith('[')) {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                title: `${prefix}${currentTitle}`
+              });
+            }
+
+      - name: Post analysis comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const result = JSON.parse('${{ needs.ai-analysis.outputs.analysis_result }}');
+            const decision = result.decision;
+            const risk = result.risk_level;
+
+            let emoji = '';
+            switch(decision) {
+              case 'auto-merge': emoji = '✅'; break;
+              case 'needs-review': emoji = '👀'; break;
+              case 'needs-revalidation': emoji = '🔄'; break;
+              case 'breaking-change': emoji = '🚨'; break;
+              default: emoji = '❓';
+            }
+
+            let body = `## ${emoji} Module Upgrade Analysis\n\n`;
+            body += `| Field | Value |\n|-------|-------|\n`;
+            body += `| Decision | \`${decision}\` |\n`;
+            body += `| Risk Level | \`${risk}\` |\n`;
+            body += `| Version Type | \`${result.version_type}\` |\n`;
+            body += `| Plan Changes | +${result.plan_summary?.add || 0} ~${result.plan_summary?.change || 0} -${result.plan_summary?.destroy || 0} ♻${result.plan_summary?.replace || 0} |\n\n`;
+
+            if (result.breaking_changes?.length > 0) {
+              body += `### Breaking Changes\n`;
+              for (const bc of result.breaking_changes) {
+                const status = bc.adapted ? '✅ Adapted' : '❌ Not adapted';
+                body += `- **${bc.type}**: ${bc.description} (${status})\n`;
+              }
+              body += '\n';
+            }
+
+            if (result.security_findings?.length > 0) {
+              body += `### Security Findings\n`;
+              for (const sf of result.security_findings) {
+                body += `- **[${sf.severity.toUpperCase()}]** ${sf.category}: ${sf.description}\n`;
+              }
+              body += '\n';
+            }
+
+            if (result.adaptations_applied?.length > 0) {
+              body += `### Adaptations Applied\n`;
+              for (const a of result.adaptations_applied) {
+                body += `- \`${a.file}\`: ${a.change}\n`;
+              }
+              body += '\n⚠️ Code was modified. Pipeline will re-run to validate adaptations.\n\n';
+            }
+
+            body += `### Rationale\n${result.rationale}\n\n`;
+
+            if (decision === 'needs-review' || decision === 'breaking-change') {
+              body += `---\n💬 **Need deeper analysis?** Comment \`@claude\` on this PR for interactive follow-up with full MCP tool access.\n`;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+      # Auto-merge for low-risk patches/minor
+      - name: Auto-merge
+        if: steps.parse.outputs.decision == 'auto-merge' && steps.parse.outputs.risk_level == 'low'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'squash'
+            });
+
+      # Request review for medium+ risk
+      - name: Request review
+        if: steps.parse.outputs.decision == 'needs-review'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              // Request review from CODEOWNERS
+              const { data: reviewers } = await github.rest.repos.getCodeownersErrors({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+
+              // Fallback: request review from repo admins
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                team_reviewers: ['platform-team']
+              });
+            } catch (e) {
+              console.log('Could not request reviewers:', e.message);
+            }
+
+  # ─────────────────────────────────────────────────
+  # Interactive: @claude mention on PR
+  # ─────────────────────────────────────────────────
+  interactive:
+    name: "Interactive Analysis (@claude)"
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref || '' }}
+          fetch-depth: 0
+
+      - name: Run Claude Interactive
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-6
+          max_turns: "15"
+          mcp_config: .mcp-ci.json
+          prompt: |
+            You are a Terraform module upgrade analyst responding to a question on a PR.
+
+            The user's comment: ${{ github.event.comment.body }}
+
+            Read the agent definition at `.github/agents/module-upgrade-analyst.md` for your full capabilities.
+
+            You have access to Terraform MCP tools for deep investigation of the private registry modules.
+            You can make code changes and push them to this PR branch if needed.
+
+            Respond conversationally with your findings. If you make code changes, note that the pipeline will re-run automatically.
