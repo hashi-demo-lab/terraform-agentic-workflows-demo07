@@ -49,21 +49,43 @@ while [[ $# -gt 0 ]]; do
 done
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+BASE_BRANCH="${BASE_BRANCH:-$(cd "$REPO_ROOT" && git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}' || echo "main")}"
 MODULE_NAME="${MODULE_NAME:-s3-bucket}"
 MODULE_SOURCE="${MODULE_SOURCE:?MODULE_SOURCE is required}"
 MODULE_CURRENT_VERSION="${MODULE_CURRENT_VERSION:?MODULE_CURRENT_VERSION is required}"
 MODULE_TARGET_VERSION="${MODULE_TARGET_VERSION:-${MODULE_CURRENT_VERSION}}"
 
-# ─── Ensure on main ─────────────────────────────────────────────────────────
+# ─── Validate version bump ─────────────────────────────────────────────────
+if [[ "$MODULE_TARGET_VERSION" == "$MODULE_CURRENT_VERSION" ]]; then
+  error "MODULE_TARGET_VERSION (${MODULE_TARGET_VERSION}) is the same as MODULE_CURRENT_VERSION (${MODULE_CURRENT_VERSION})"
+  echo ""
+  info "Run publish-module-version.sh first to create a new version in the PMR:"
+  printf "    ${C_DIM}bash specs/feat-consumer-uplift/demo/publish-module-version.sh${C_RESET}\n"
+  echo ""
+  info "Or set MODULE_TARGET_VERSION in demo.env to the version you want to bump to."
+  exit 1
+fi
+
+# ─── Ensure on base branch ─────────────────────────────────────────────────
 header "Preparing Demo Trigger"
 
 cd "$REPO_ROOT"
+info "Working directory: ${REPO_ROOT}"
+info "Base branch: ${BASE_BRANCH}"
+
 CURRENT_BRANCH=$(git branch --show-current)
-if [[ "$CURRENT_BRANCH" != "main" ]]; then
-  warn "Not on main branch (currently on ${CURRENT_BRANCH})"
-  info "Switching to main..."
-  git checkout main
-  git pull origin main
+if [[ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]]; then
+  warn "Not on ${BASE_BRANCH} (currently on ${CURRENT_BRANCH})"
+  info "Switching to ${BASE_BRANCH}..."
+  git checkout "$BASE_BRANCH"
+  git pull origin "$BASE_BRANCH"
+fi
+
+# Verify consumer code exists (created by setup.sh)
+if [[ ! -f "main.tf" ]]; then
+  error "main.tf not found in ${REPO_ROOT}"
+  error "Run setup.sh first to template and commit consumer code"
+  exit 1
 fi
 
 # ─── Branch name ─────────────────────────────────────────────────────────────
@@ -181,12 +203,12 @@ PR_URL=$(gh pr create \
   --body "$PR_BODY" \
   --label "dependencies,terraform" \
   --head "$BRANCH_NAME" \
-  --base "main" 2>&1)
+  --base "$BASE_BRANCH" 2>&1)
 
 success "PR created"
 
-# ─── Switch back to main ────────────────────────────────────────────────────
-git checkout main
+# ─── Switch back to base branch ───────────────────────────────────────────
+git checkout "$BASE_BRANCH"
 
 # ─── Summary ─────────────────────────────────────────────────────────────────
 header "Demo Triggered"

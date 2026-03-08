@@ -90,12 +90,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
-          cli_config_file: ${{ steps.tfe-creds.outputs.credentials_file }}
-
       - name: Configure TFE credentials
         id: tfe-creds
         run: |
@@ -106,6 +100,12 @@ jobs:
           }
           TFRC
           echo "credentials_file=${CREDS_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          cli_config_file: ${{ steps.tfe-creds.outputs.credentials_file }}
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive

@@ -53,7 +53,7 @@ REPO_NAME="$(basename "$REPO_ROOT")"
 TFE_ORG="${TFE_ORG:?TFE_ORG is required}"
 TFE_PROJECT="${TFE_PROJECT:-sandbox}"
 TFE_HOSTNAME="${TFE_HOSTNAME:-app.terraform.io}"
-TFE_WORKSPACE="${TFE_WORKSPACE:-${REPO_NAME}}"
+BASE_BRANCH="${BASE_BRANCH:-$(cd "$REPO_ROOT" && git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}' || echo "main")}"
 MODULE_SOURCE="${MODULE_SOURCE:?MODULE_SOURCE is required}"
 MODULE_CURRENT_VERSION="${MODULE_CURRENT_VERSION:?MODULE_CURRENT_VERSION is required}"
 AWS_REGION="${AWS_REGION:-ap-southeast-2}"
@@ -67,6 +67,9 @@ if [[ -z "$GITHUB_REPO" ]]; then
   error "Could not detect GitHub repo. Set GITHUB_REPO in demo.env"
   exit 1
 fi
+
+# Default workspace name from repo name (prefer GITHUB_REPO over local dir)
+TFE_WORKSPACE="${TFE_WORKSPACE:-$(basename "$GITHUB_REPO")}"
 
 # ─── Display config ─────────────────────────────────────────────────────────
 header "Demo Setup Configuration"
@@ -100,11 +103,25 @@ if ! command -v jq &>/dev/null; then
 fi
 success "jq available"
 
-if ! gh auth status &>/dev/null 2>&1; then
-  error "Not authenticated to GitHub. Run: gh auth login"
+if ! gh auth token &>/dev/null 2>&1; then
+  error "Not authenticated to GitHub. Run: gh auth login (or set GITHUB_TOKEN)"
   exit 1
 fi
 success "GitHub authenticated"
+
+# ─── Ensure on base branch ─────────────────────────────────────────────────
+cd "$REPO_ROOT"
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]]; then
+  warn "Not on base branch (currently on ${CURRENT_BRANCH})"
+  info "Switching to ${BASE_BRANCH}..."
+  git checkout "$BASE_BRANCH"
+  git pull origin "$BASE_BRANCH"
+  success "On ${BASE_BRANCH}"
+else
+  git pull origin "$BASE_BRANCH"
+  success "Already on ${BASE_BRANCH}"
+fi
 
 # ─── Resolve project ID ─────────────────────────────────────────────────────
 header "Resolving TFC Project"
@@ -244,9 +261,61 @@ with HCP Terraform backend (workspace: ${TFE_WORKSPACE}).
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
-  info "Pushing to origin/main..."
-  git push origin main
-  success "Consumer code pushed to main"
+  info "Pushing to origin/${BASE_BRANCH}..."
+  git push origin "$BASE_BRANCH"
+  success "Consumer code pushed to ${BASE_BRANCH}"
+fi
+
+# ─── Terraform init & plan (optional) ─────────────────────────────────────
+header "Terraform Smoke Test"
+
+cd "$REPO_ROOT"
+
+if [[ "${SKIP_PLAN:-}" == "true" ]]; then
+  info "Skipping terraform init/plan (SKIP_PLAN=true)"
+  info "Ensure AWS credentials are configured in the TFC workspace/project before triggering"
+else
+  info "Running terraform init..."
+  if terraform init -input=false; then
+    success "Terraform initialized"
+  else
+    warn "terraform init failed — this is OK if AWS credentials aren't configured yet"
+    warn "Ensure the TFC workspace has AWS credentials (via project variable set) before triggering"
+    info "Skipping plan. Re-run setup.sh after configuring credentials, or proceed to trigger."
+  fi
+
+  if [[ -d ".terraform" ]]; then
+    echo ""
+    info "Running terraform plan..."
+    if terraform plan -input=false; then
+      success "Terraform plan completed"
+    else
+      warn "terraform plan exited with changes or errors (review output above)"
+      warn "This is expected if AWS credentials aren't configured in the workspace yet"
+    fi
+  fi
+fi
+
+# ─── Check & set GitHub secrets ────────────────────────────────────────────
+header "GitHub Repo Secrets"
+
+MISSING_SECRETS=()
+
+for secret_name in TFE_TOKEN ANTHROPIC_API_KEY TFE_TOKEN_DEPENDABOT; do
+  if gh secret list --repo "$GITHUB_REPO" 2>/dev/null | grep -q "^${secret_name}[[:space:]]"; then
+    success "${secret_name} already set"
+  else
+    warn "${secret_name} not set"
+    MISSING_SECRETS+=("$secret_name")
+  fi
+done
+
+if [[ ${#MISSING_SECRETS[@]} -gt 0 ]]; then
+  echo ""
+  printf "  ${C_WHITE}Set missing secrets:${C_RESET}\n"
+  for secret_name in "${MISSING_SECRETS[@]}"; do
+    printf "     ${C_DIM}gh secret set %s --repo %s${C_RESET}\n" "$secret_name" "$GITHUB_REPO"
+  done
 fi
 
 # ─── Print next steps ───────────────────────────────────────────────────────
@@ -254,17 +323,14 @@ header "Setup Complete"
 
 echo ""
 printf "  ${C_WHITE}Next steps:${C_RESET}\n\n"
-printf "  ${C_CYAN}1.${C_RESET} Add these secrets to the GitHub repo:\n"
-printf "     ${C_DIM}gh secret set TFE_TOKEN --repo %s${C_RESET}\n" "$GITHUB_REPO"
-printf "     ${C_DIM}gh secret set ANTHROPIC_API_KEY --repo %s${C_RESET}\n" "$GITHUB_REPO"
-printf "     ${C_DIM}gh secret set TFE_TOKEN_DEPENDABOT --repo %s${C_RESET}\n" "$GITHUB_REPO"
-echo ""
-printf "  ${C_CYAN}2.${C_RESET} Verify the workspace exists in TFC:\n"
-printf "     ${C_DIM}https://%s/app/%s/workspaces/%s${C_RESET}\n" "$TFE_HOSTNAME" "$TFE_ORG" "$TFE_WORKSPACE"
-echo ""
-printf "  ${C_CYAN}3.${C_RESET} Run the initial plan to confirm setup:\n"
-printf "     ${C_DIM}cd %s && terraform init && terraform plan${C_RESET}\n" "$REPO_ROOT"
-echo ""
-printf "  ${C_CYAN}4.${C_RESET} Trigger the demo:\n"
+STEP=1
+if [[ ${#MISSING_SECRETS[@]} -gt 0 ]]; then
+  printf "  ${C_CYAN}${STEP}.${C_RESET} Set the missing secrets listed above\n"
+  STEP=$((STEP + 1))
+fi
+printf "  ${C_CYAN}${STEP}.${C_RESET} Publish a new module version to the PMR:\n"
+printf "     ${C_DIM}bash specs/feat-consumer-uplift/demo/publish-module-version.sh${C_RESET}\n"
+STEP=$((STEP + 1))
+printf "  ${C_CYAN}${STEP}.${C_RESET} Trigger the demo:\n"
 printf "     ${C_DIM}bash specs/feat-consumer-uplift/demo/trigger-bump.sh${C_RESET}\n"
 echo ""

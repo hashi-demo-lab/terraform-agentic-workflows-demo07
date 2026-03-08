@@ -43,6 +43,7 @@ FORCE=false
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 REPO_NAME="$(basename "$REPO_ROOT")"
+BASE_BRANCH="${BASE_BRANCH:-$(cd "$REPO_ROOT" && git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}' || echo "main")}"
 TFE_ORG="${TFE_ORG:?}"
 TFE_HOSTNAME="${TFE_HOSTNAME:-app.terraform.io}"
 TFE_WORKSPACE="${TFE_WORKSPACE:-${REPO_NAME}}"
@@ -233,19 +234,63 @@ else
   fi
 fi
 
+# ─── Delete demo module tag from source repo ────────────────────────────────
+header "Cleaning Up Module Tags"
+
+MODULE_SOURCE_REPO="${MODULE_SOURCE_REPO:-hashi-demo-lab/terraform-aws-s3-bucket}"
+MODULE_TARGET_VERSION="${MODULE_TARGET_VERSION:-}"
+
+if [[ -n "$MODULE_TARGET_VERSION" && "$MODULE_TARGET_VERSION" != "${MODULE_CURRENT_VERSION:-}" ]]; then
+  TAG_NAME="v${MODULE_TARGET_VERSION}"
+  info "Checking for demo tag ${TAG_NAME} on ${MODULE_SOURCE_REPO}..."
+
+  if gh api "repos/${MODULE_SOURCE_REPO}/git/refs/tags/${TAG_NAME}" &>/dev/null; then
+    if gh api "repos/${MODULE_SOURCE_REPO}/git/refs/tags/${TAG_NAME}" --method DELETE &>/dev/null; then
+      success "Deleted tag ${TAG_NAME} from ${MODULE_SOURCE_REPO}"
+    else
+      warn "Could not delete tag ${TAG_NAME} — may need manual cleanup"
+    fi
+  else
+    info "Tag ${TAG_NAME} does not exist on ${MODULE_SOURCE_REPO}"
+  fi
+else
+  info "No demo module tag to clean up (MODULE_TARGET_VERSION not set or same as current)"
+fi
+
 # ─── Clean up local .tf files ───────────────────────────────────────────────
 header "Cleaning Local Files"
 
 cd "$REPO_ROOT"
+
+# Ensure we're on the base branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]]; then
+  info "Switching to ${BASE_BRANCH}..."
+  git checkout "$BASE_BRANCH"
+  git pull origin "$BASE_BRANCH"
+fi
+
+TF_FILES_REMOVED=false
 for f in main.tf variables.tf outputs.tf versions.tf; do
   if [[ -f "$f" ]]; then
     rm "$f"
     success "Removed ${f}"
+    TF_FILES_REMOVED=true
   fi
 done
 
 # Remove terraform state/cache
 rm -rf .terraform .terraform.lock.hcl 2>/dev/null && info "Removed .terraform cache" || true
+
+# Commit and push the cleanup
+if [[ "$TF_FILES_REMOVED" == true ]]; then
+  git add -A main.tf variables.tf outputs.tf versions.tf 2>/dev/null || true
+  if ! git diff --cached --quiet; then
+    git commit -m "chore: remove consumer code after demo teardown"
+    git push origin "$BASE_BRANCH"
+    success "Cleanup committed and pushed to ${BASE_BRANCH}"
+  fi
+fi
 
 header "Teardown Complete"
 echo ""
