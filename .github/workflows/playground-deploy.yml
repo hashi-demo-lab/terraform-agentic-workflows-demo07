@@ -1,10 +1,9 @@
-name: Deploy SDD Playground
+name: Deploy SDD Playground Redirect
 
 on:
   push:
     branches: [main]
     paths:
-      - '.foundations/design/sdd-workflow-playground.html'
       - '.github/workflows/playground-deploy.yml'
   workflow_dispatch:
 
@@ -14,18 +13,31 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-
       - name: Set trimmed secrets
         id: vars
         run: |
           echo "team_id=$(echo '${{ secrets.VERCEL_ORG_ID }}' | xargs)" >> "$GITHUB_OUTPUT"
           echo "project_id=$(echo '${{ secrets.VERCEL_PROJECT_ID }}' | xargs)" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy via Vercel API
+      - name: Deploy redirect via Vercel API
         id: deploy
         run: |
-          FILE_CONTENT=$(base64 -w 0 .foundations/design/sdd-workflow-playground.html)
+          REDIRECT_HTML=$(cat <<'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="refresh" content="0;url=https://pages.github.ibm.com/AdvArch/tfai/">
+            <title>Redirecting…</title>
+          </head>
+          <body style="background:#0a0a12;color:#e0dfe6;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh">
+            <p>Redirecting to <a href="https://pages.github.ibm.com/AdvArch/tfai/" style="color:#00f0ff">pages.github.ibm.com/AdvArch/tfai</a>…</p>
+          </body>
+          </html>
+          HTMLEOF
+          )
+
+          FILE_CONTENT=$(echo "$REDIRECT_HTML" | base64 -w 0)
           VERCEL_JSON=$(echo '{"rewrites":[{"source":"/","destination":"/index.html"}]}' | base64 -w 0)
 
           RESPONSE=$(curl -s --fail-with-body -X POST \
