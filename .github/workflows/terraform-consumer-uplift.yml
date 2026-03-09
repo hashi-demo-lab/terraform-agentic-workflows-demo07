@@ -231,11 +231,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: >-
-            --model claude-sonnet-4-6
-            --max-turns 15
-            --mcp-config .mcp-ci.json
-            --output-format json
+          claude_args: "--model claude-sonnet-4-6 --max-turns 15"
           prompt: |
             You are a Terraform module upgrade analyst. Analyze this PR and produce a structured JSON recommendation.
 
@@ -251,7 +247,16 @@ jobs:
 
             The plan output is available at `plan_readable.txt` and `plan_output.txt`.
 
-            Produce your final answer as a JSON object matching the schema in the agent definition.
+            Your FINAL message must be ONLY a JSON object (no markdown fencing, no commentary) with these fields:
+            - decision: "auto-merge" | "needs-review" | "needs-revalidation" | "breaking-change"
+            - risk_level: "low" | "medium" | "high" | "critical"
+            - version_type: patch/minor/major
+            - breaking_changes: []
+            - security_findings: []
+            - plan_summary: {add, change, destroy, replace, total}
+            - adaptations_applied: []
+            - interface_diff: {inputs_added, inputs_removed, inputs_changed, outputs_added, outputs_removed, outputs_changed}
+            - rationale: string
 
             Important:
             - If you push code changes (step 5B), set decision to "needs-revalidation"
@@ -261,33 +266,26 @@ jobs:
       - name: Parse structured output
         id: parse-output
         run: |
-          # Read Claude's execution output file
-          EXEC_FILE='${{ steps.claude.outputs.execution_file }}'
+          # Claude posts its analysis as a PR comment. Extract the JSON from the latest comment.
+          COMMENTS=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --jq '[.[] | select(.body | test("decision")) | .body] | last // ""' 2>/dev/null) || true
 
-          if [[ -n "$EXEC_FILE" && -f "$EXEC_FILE" ]]; then
-            # Extract the last assistant message's text content from the execution JSON
-            RESPONSE=$(jq -r '
-              [.[] | select(.type == "assistant") | .message.content[] | select(.type == "text") | .text] | last // ""
-            ' "$EXEC_FILE")
-          else
-            echo "Warning: No execution file found at: $EXEC_FILE" >&2
-            RESPONSE=""
-          fi
+          # Try to extract JSON from the comment
+          RESULT=""
 
-          # Try to extract JSON from Claude's response (find object with "decision" key)
-          RESULT=$(echo "$RESPONSE" | jq -r '
-            if type == "object" and has("decision") then .
-            else empty end
-          ' 2>/dev/null) || true
+          if [[ -n "$COMMENTS" ]]; then
+            # Try: raw JSON object
+            RESULT=$(echo "$COMMENTS" | jq -c 'select(has("decision"))' 2>/dev/null) || true
 
-          # If direct parse failed, try to extract JSON block from markdown
-          if [[ -z "$RESULT" ]]; then
-            RESULT=$(echo "$RESPONSE" | sed -n '/```json/,/```/p' | sed '1d;$d' | jq -c '.' 2>/dev/null) || true
-          fi
+            # Try: JSON in markdown code block
+            if [[ -z "$RESULT" ]]; then
+              RESULT=$(echo "$COMMENTS" | sed -n '/```json/,/```/{/```/d;p}' | jq -c '.' 2>/dev/null) || true
+            fi
 
-          # If still no result, try grep for JSON with decision field
-          if [[ -z "$RESULT" ]]; then
-            RESULT=$(echo "$RESPONSE" | grep -oP '\{[^{}]*"decision"[^{}]*\}' | head -1 | jq -c '.' 2>/dev/null) || true
+            # Try: find JSON object with decision field anywhere in text
+            if [[ -z "$RESULT" ]]; then
+              RESULT=$(echo "$COMMENTS" | grep -oP '\{[^{}]*"decision"\s*:\s*"[^"]*"[^{}]*\}' | head -1 | jq -c '.' 2>/dev/null) || true
+            fi
           fi
 
           if [[ -z "$RESULT" ]] || ! echo "$RESULT" | jq empty 2>/dev/null; then
@@ -496,7 +494,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--model claude-sonnet-4-6 --max-turns 15 --mcp-config .mcp-ci.json"
+          claude_args: "--model claude-sonnet-4-6 --max-turns 15"
           prompt: |
             You are a Terraform module upgrade analyst responding to a question on a PR.
 
