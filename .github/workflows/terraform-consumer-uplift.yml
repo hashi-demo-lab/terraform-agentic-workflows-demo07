@@ -99,6 +99,7 @@ jobs:
     outputs:
       plan_exitcode: ${{ steps.plan.outputs.exitcode }}
       plan_summary: ${{ steps.plan-summary.outputs.summary }}
+      plan_resources: ${{ steps.plan-summary.outputs.plan_resources }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -165,11 +166,19 @@ jobs:
             2)
               terraform show -no-color tfplan > plan_readable.txt 2>&1 || true
 
-              # Extract resource-level actions for the summary
-              ADD_LIST=$(grep -E '# .* will be created' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ will be created//' || true)
-              CHANGE_LIST=$(grep -E '# .* will be updated' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ will be updated in-place//' || true)
-              DESTROY_LIST=$(grep -E '# .* will be destroyed' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ will be destroyed//' || true)
-              REPLACE_LIST=$(grep -E '# .* must be replaced' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ must be replaced//' || true)
+              # Generate resource table (gist-style: Action | Resource)
+              {
+                awk '/will be/ || /must be/ {print "| " $5 " | " $2 " |"; next}' plan_readable.txt \
+                  | sed \
+                    -e 's/created/:white_check_mark: create/' \
+                    -e 's/destroyed/:bangbang: destroy/' \
+                    -e 's/replaced/:recycle: replace/' \
+                    -e 's/updated/:pencil2: update/' \
+                    -e 's/read/:mag: read/'
+              } > plan_resources_table.txt
+
+              # Plan summary line (e.g., "Plan: 4 to add, 0 to change, 0 to destroy.")
+              PLAN_LINE=$(awk '/Plan:/ { print $0 }' plan_readable.txt || echo "")
 
               {
                 echo "## 2/4 — Validate Terraform"
@@ -184,21 +193,17 @@ jobs:
                 echo "| \`terraform plan\` | Exit 2 (changes) |"
                 echo ""
 
-                if [[ -n "$ADD_LIST" || -n "$CHANGE_LIST" || -n "$DESTROY_LIST" || -n "$REPLACE_LIST" ]]; then
+                if [[ -s plan_resources_table.txt ]]; then
                   echo "### Planned Resource Changes"
                   echo ""
-                  if [[ -n "$ADD_LIST" ]]; then
-                    echo "$ADD_LIST" | while read -r r; do echo "- :white_check_mark: **Create**: \`${r}\`"; done
-                  fi
-                  if [[ -n "$CHANGE_LIST" ]]; then
-                    echo "$CHANGE_LIST" | while read -r r; do echo "- :pencil2: **Update**: \`${r}\`"; done
-                  fi
-                  if [[ -n "$DESTROY_LIST" ]]; then
-                    echo "$DESTROY_LIST" | while read -r r; do echo "- :x: **Destroy**: \`${r}\`"; done
-                  fi
-                  if [[ -n "$REPLACE_LIST" ]]; then
-                    echo "$REPLACE_LIST" | while read -r r; do echo "- :arrows_counterclockwise: **Replace**: \`${r}\`"; done
-                  fi
+                  echo "| Action | Resource |"
+                  echo "|--------|----------|"
+                  cat plan_resources_table.txt
+                  echo ""
+                fi
+
+                if [[ -n "$PLAN_LINE" ]]; then
+                  echo "> ${PLAN_LINE}"
                 fi
               } >> "$GITHUB_STEP_SUMMARY"
               ;;
@@ -234,6 +239,15 @@ jobs:
             '{add: $add, change: $change, destroy: $destroy, replace: $replace, total: ($add + $change + $destroy + $replace)}')
 
           echo "summary=$(echo "$SUMMARY" | jq -c '.')" >> "$GITHUB_OUTPUT"
+
+          # Output the resource table as multiline string for the PR comment
+          if [[ -s plan_resources_table.txt ]]; then
+            {
+              echo "plan_resources<<PLAN_TABLE_EOF"
+              cat plan_resources_table.txt
+              echo "PLAN_TABLE_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Handle no-changes (exit 0) — close PR
         if: steps.plan.outputs.exitcode == '0'
@@ -520,6 +534,7 @@ jobs:
         env:
           ANALYSIS_RESULT: ${{ needs.ai-analysis.outputs.analysis_result }}
           MODULES_CHANGED: ${{ needs.classify.outputs.modules_changed }}
+          PLAN_RESOURCES: ${{ needs.validate.outputs.plan_resources }}
         with:
           script: |
             const result = JSON.parse(process.env.ANALYSIS_RESULT);
@@ -559,6 +574,15 @@ jobs:
             const planTotal = (plan.add || 0) + (plan.change || 0) + (plan.destroy || 0) + (plan.replace || 0);
             body += `| **Plan Changes** | \`${planTotal}\` total — `;
             body += `+${plan.add || 0} create, ~${plan.change || 0} update, -${plan.destroy || 0} destroy, ♻${plan.replace || 0} replace |\n\n`;
+
+            // ── Plan resource table ──
+            const planResources = process.env.PLAN_RESOURCES || '';
+            if (planResources.trim()) {
+              body += `### Planned Resource Changes\n\n`;
+              body += `| Action | Resource |\n`;
+              body += `|--------|----------|\n`;
+              body += planResources.trim() + `\n\n`;
+            }
 
             // ── Interface diff ──
             const diff = result.interface_diff || {};
