@@ -67,12 +67,26 @@ jobs:
           echo "is_dependabot=$(echo "$RESULT" | jq -r '.is_dependabot')" >> "$GITHUB_OUTPUT"
           echo "should_continue=true" >> "$GITHUB_OUTPUT"
 
-          echo "### Classification Result" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Version Type | $(echo "$RESULT" | jq -r '.version_type') |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Module Count | $(echo "$RESULT" | jq -r '.module_count') |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Dependabot | $(echo "$RESULT" | jq -r '.is_dependabot') |" >> "$GITHUB_STEP_SUMMARY"
+          # ── Step summary ──
+          VERSION_TYPE=$(echo "$RESULT" | jq -r '.version_type')
+          MODULE_COUNT=$(echo "$RESULT" | jq -r '.module_count')
+          IS_DEPENDABOT=$(echo "$RESULT" | jq -r '.is_dependabot')
+
+          {
+            echo "## 1/4 — Classify Version Bump"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Version Type | \`${VERSION_TYPE}\` |"
+            echo "| Modules Changed | ${MODULE_COUNT} |"
+            echo "| Source | $(if [[ "$IS_DEPENDABOT" == "true" ]]; then echo "Dependabot"; else echo "Fallback Scanner / Manual"; fi) |"
+            echo ""
+            echo "### Modules"
+            echo ""
+            echo "| Module | Source | Old Version | New Version | Bump |"
+            echo "|--------|--------|-------------|-------------|------|"
+            echo "$RESULT" | jq -r '.modules_changed[] | "| `\(.module)` | \(.source) | `\(.old_version)` | `\(.new_version)` | `\(.bump_type)` |"'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ─────────────────────────────────────────────────
   # Job 2: VALIDATE — Deterministic Terraform checks
@@ -125,18 +139,68 @@ jobs:
 
           case $PLAN_EXIT in
             0)
-              echo "### Plan: No Changes" >> "$GITHUB_STEP_SUMMARY"
-              echo "The workspace already reflects this module version." >> "$GITHUB_STEP_SUMMARY"
+              {
+                echo "## 2/4 — Validate Terraform"
+                echo ""
+                echo "> **Result**: No changes — workspace already at target version."
+                echo ""
+                echo "The PR will be auto-closed."
+              } >> "$GITHUB_STEP_SUMMARY"
               ;;
             1)
-              echo "### Plan: Error" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              tail -20 plan_output.txt >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              {
+                echo "## 2/4 — Validate Terraform"
+                echo ""
+                echo "> **Result**: Plan error — likely breaking changes."
+                echo ""
+                echo "<details><summary>Error output (last 30 lines)</summary>"
+                echo ""
+                echo '```hcl'
+                tail -30 plan_output.txt
+                echo '```'
+                echo ""
+                echo "</details>"
+              } >> "$GITHUB_STEP_SUMMARY"
               ;;
             2)
-              echo "### Plan: Changes Detected" >> "$GITHUB_STEP_SUMMARY"
               terraform show -no-color tfplan > plan_readable.txt 2>&1 || true
+
+              # Extract resource-level actions for the summary
+              ADD_LIST=$(grep -E '# .* will be created' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ will be created//' || true)
+              CHANGE_LIST=$(grep -E '# .* will be updated' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ will be updated in-place//' || true)
+              DESTROY_LIST=$(grep -E '# .* will be destroyed' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ will be destroyed//' || true)
+              REPLACE_LIST=$(grep -E '# .* must be replaced' plan_readable.txt 2>/dev/null | sed 's/.*# //' | sed 's/ must be replaced//' || true)
+
+              {
+                echo "## 2/4 — Validate Terraform"
+                echo ""
+                echo "> **Result**: Changes detected — proceeding to AI analysis."
+                echo ""
+                echo "| Check | Status |"
+                echo "|-------|--------|"
+                echo "| \`terraform fmt\` | Passed |"
+                echo "| \`terraform validate\` | Passed |"
+                echo "| \`tflint\` | Passed |"
+                echo "| \`terraform plan\` | Exit 2 (changes) |"
+                echo ""
+
+                if [[ -n "$ADD_LIST" || -n "$CHANGE_LIST" || -n "$DESTROY_LIST" || -n "$REPLACE_LIST" ]]; then
+                  echo "### Planned Resource Changes"
+                  echo ""
+                  if [[ -n "$ADD_LIST" ]]; then
+                    echo "$ADD_LIST" | while read -r r; do echo "- :white_check_mark: **Create**: \`${r}\`"; done
+                  fi
+                  if [[ -n "$CHANGE_LIST" ]]; then
+                    echo "$CHANGE_LIST" | while read -r r; do echo "- :pencil2: **Update**: \`${r}\`"; done
+                  fi
+                  if [[ -n "$DESTROY_LIST" ]]; then
+                    echo "$DESTROY_LIST" | while read -r r; do echo "- :x: **Destroy**: \`${r}\`"; done
+                  fi
+                  if [[ -n "$REPLACE_LIST" ]]; then
+                    echo "$REPLACE_LIST" | while read -r r; do echo "- :arrows_counterclockwise: **Replace**: \`${r}\`"; done
+                  fi
+                fi
+              } >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
 
@@ -315,6 +379,54 @@ jobs:
 
           echo "result=$(echo "$RESULT" | jq -c '.')" >> "$GITHUB_OUTPUT"
 
+          # ── Step summary ──
+          DECISION=$(echo "$RESULT" | jq -r '.decision')
+          RISK=$(echo "$RESULT" | jq -r '.risk_level')
+          BREAKING_COUNT=$(echo "$RESULT" | jq '.breaking_changes | length')
+          SECURITY_COUNT=$(echo "$RESULT" | jq '.security_findings | length')
+          ADAPTATION_COUNT=$(echo "$RESULT" | jq '.adaptations_applied | length')
+
+          {
+            echo "## 3/4 — AI Analysis"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Decision | \`${DECISION}\` |"
+            echo "| Risk Level | \`${RISK}\` |"
+            echo "| Breaking Changes | ${BREAKING_COUNT} |"
+            echo "| Security Findings | ${SECURITY_COUNT} |"
+            echo "| Adaptations Applied | ${ADAPTATION_COUNT} |"
+            echo ""
+
+            # Interface diff summary
+            DIFF=$(echo "$RESULT" | jq '.interface_diff // {}')
+            IN_ADD=$(echo "$DIFF" | jq '.inputs_added | length')
+            IN_REM=$(echo "$DIFF" | jq '.inputs_removed | length')
+            IN_CHG=$(echo "$DIFF" | jq '.inputs_changed | length')
+            OUT_ADD=$(echo "$DIFF" | jq '.outputs_added | length')
+            OUT_REM=$(echo "$DIFF" | jq '.outputs_removed | length')
+            OUT_CHG=$(echo "$DIFF" | jq '.outputs_changed | length')
+            TOTAL_DIFF=$((IN_ADD + IN_REM + IN_CHG + OUT_ADD + OUT_REM + OUT_CHG))
+
+            if [[ "$TOTAL_DIFF" -gt 0 ]]; then
+              echo "### Interface Diff"
+              echo ""
+              echo "| Change | Inputs | Outputs |"
+              echo "|--------|--------|---------|"
+              echo "| Added | ${IN_ADD} | ${OUT_ADD} |"
+              echo "| Removed | ${IN_REM} | ${OUT_REM} |"
+              echo "| Changed | ${IN_CHG} | ${OUT_CHG} |"
+            else
+              echo "> Interface: No changes detected between old and new module versions."
+            fi
+            echo ""
+
+            RATIONALE=$(echo "$RESULT" | jq -r '.rationale // "No rationale provided"')
+            echo "### Rationale"
+            echo ""
+            echo "${RATIONALE}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # ─────────────────────────────────────────────────
   # Job 4: DECISION — Act on AI recommendation
   # ─────────────────────────────────────────────────
@@ -333,6 +445,27 @@ jobs:
           echo "rationale=$(echo "$RESULT" | jq -r '.rationale')" >> "$GITHUB_OUTPUT"
           echo "has_adaptations=$(echo "$RESULT" | jq '.adaptations_applied | length > 0')" >> "$GITHUB_OUTPUT"
           echo "has_security=$(echo "$RESULT" | jq '[.security_findings[] | select(.severity == "high" or .severity == "critical")] | length > 0')" >> "$GITHUB_OUTPUT"
+
+          # ── Step summary ──
+          DECISION=$(echo "$RESULT" | jq -r '.decision')
+          RISK=$(echo "$RESULT" | jq -r '.risk_level')
+          VERSION_TYPE='${{ needs.classify.outputs.version_type }}'
+
+          case "$DECISION" in
+            auto-merge)       ICON="white_check_mark"; ACTION="Auto-merging PR" ;;
+            needs-review)     ICON="eyes";             ACTION="Requesting human review" ;;
+            needs-revalidation) ICON="arrows_counterclockwise"; ACTION="Re-validating after adaptations" ;;
+            breaking-change)  ICON="rotating_light";   ACTION="Blocking merge — manual intervention required" ;;
+            *)                ICON="question";         ACTION="Unknown decision" ;;
+          esac
+
+          {
+            echo "## 4/4 — Decision"
+            echo ""
+            echo ":${ICON}: **${DECISION}** (risk: \`${RISK}\`, version: \`${VERSION_TYPE}\`)"
+            echo ""
+            echo "**Action**: ${ACTION}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply labels
         uses: actions/github-script@v7
@@ -386,54 +519,122 @@ jobs:
         with:
           script: |
             const result = JSON.parse('${{ needs.ai-analysis.outputs.analysis_result }}');
+            const modulesChanged = JSON.parse('${{ needs.classify.outputs.modules_changed }}');
             const decision = result.decision;
             const risk = result.risk_level;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
-            let emoji = '';
-            switch(decision) {
-              case 'auto-merge': emoji = '✅'; break;
-              case 'needs-review': emoji = '👀'; break;
-              case 'needs-revalidation': emoji = '🔄'; break;
-              case 'breaking-change': emoji = '🚨'; break;
-              default: emoji = '❓';
+            // Decision banner
+            const banners = {
+              'auto-merge':        { emoji: '✅', label: 'Auto-Merge Approved',   color: '' },
+              'needs-review':      { emoji: '👀', label: 'Review Required',       color: '' },
+              'needs-revalidation':{ emoji: '🔄', label: 'Re-validation Pending', color: '' },
+              'breaking-change':   { emoji: '🚨', label: 'Breaking Change',       color: '' },
+            };
+            const banner = banners[decision] || { emoji: '❓', label: decision };
+
+            let body = `## ${banner.emoji} Module Upgrade Analysis — ${banner.label}\n\n`;
+
+            // ── Module version table ──
+            body += `### Module Versions\n\n`;
+            body += `| Module | Old | | New | Bump |\n`;
+            body += `|--------|-----|-|-----|------|\n`;
+            for (const m of modulesChanged) {
+              body += `| \`${m.module}\` | \`${m.old_version}\` | → | \`${m.new_version}\` | \`${m.bump_type}\` |\n`;
             }
+            body += `\n`;
 
-            let body = `## ${emoji} Module Upgrade Analysis\n\n`;
-            body += `| Field | Value |\n|-------|-------|\n`;
-            body += `| Decision | \`${decision}\` |\n`;
-            body += `| Risk Level | \`${risk}\` |\n`;
-            body += `| Version Type | \`${result.version_type}\` |\n`;
-            body += `| Plan Changes | +${result.plan_summary?.add || 0} ~${result.plan_summary?.change || 0} -${result.plan_summary?.destroy || 0} ♻${result.plan_summary?.replace || 0} |\n\n`;
+            // ── Summary table ──
+            body += `### Analysis Summary\n\n`;
+            body += `| | |\n|---|---|\n`;
+            body += `| **Decision** | \`${decision}\` |\n`;
+            body += `| **Risk Level** | \`${risk}\` |\n`;
+            body += `| **Version Type** | \`${result.version_type}\` |\n`;
 
+            const plan = result.plan_summary || {};
+            const planTotal = (plan.add || 0) + (plan.change || 0) + (plan.destroy || 0) + (plan.replace || 0);
+            body += `| **Plan Changes** | \`${planTotal}\` total — `;
+            body += `+${plan.add || 0} create, ~${plan.change || 0} update, -${plan.destroy || 0} destroy, ♻${plan.replace || 0} replace |\n\n`;
+
+            // ── Interface diff ──
+            const diff = result.interface_diff || {};
+            const inAdd  = (diff.inputs_added   || []).length;
+            const inRem  = (diff.inputs_removed  || []).length;
+            const inChg  = (diff.inputs_changed  || []).length;
+            const outAdd = (diff.outputs_added   || []).length;
+            const outRem = (diff.outputs_removed || []).length;
+            const outChg = (diff.outputs_changed || []).length;
+            const totalDiff = inAdd + inRem + inChg + outAdd + outRem + outChg;
+
+            body += `<details><summary><strong>Interface Diff</strong>`;
+            if (totalDiff === 0) {
+              body += ` — No changes detected</summary>\n\n`;
+              body += `The module interface (inputs/outputs) is identical between the old and new versions.\n`;
+            } else {
+              body += ` — ${totalDiff} change(s)</summary>\n\n`;
+              body += `| Change | Inputs | Outputs |\n`;
+              body += `|--------|--------|---------|\n`;
+              body += `| Added | ${inAdd} | ${outAdd} |\n`;
+              body += `| Removed | ${inRem} | ${outRem} |\n`;
+              body += `| Changed | ${inChg} | ${outChg} |\n\n`;
+              if (inAdd > 0) {
+                body += `**New inputs**: ${(diff.inputs_added || []).map(i => `\`${typeof i === 'string' ? i : i.name || JSON.stringify(i)}\``).join(', ')}\n`;
+              }
+              if (inRem > 0) {
+                body += `**Removed inputs**: ${(diff.inputs_removed || []).map(i => `\`${typeof i === 'string' ? i : i.name || JSON.stringify(i)}\``).join(', ')}\n`;
+              }
+              if (outRem > 0) {
+                body += `**Removed outputs**: ${(diff.outputs_removed || []).map(o => `\`${typeof o === 'string' ? o : o.name || JSON.stringify(o)}\``).join(', ')}\n`;
+              }
+            }
+            body += `\n</details>\n\n`;
+
+            // ── Breaking changes ──
             if (result.breaking_changes?.length > 0) {
-              body += `### Breaking Changes\n`;
+              body += `### ⚠️ Breaking Changes\n\n`;
               for (const bc of result.breaking_changes) {
-                const status = bc.adapted ? '✅ Adapted' : '❌ Not adapted';
-                body += `- **${bc.type}**: ${bc.description} (${status})\n`;
+                const icon = bc.adapted ? '✅' : '❌';
+                const status = bc.adapted ? 'Adapted' : 'Not adapted';
+                body += `- ${icon} **${bc.type}**: ${bc.description} — *${status}*`;
+                if (bc.adaptation_details) body += `\n  > ${bc.adaptation_details}`;
+                body += `\n`;
               }
               body += '\n';
             }
 
+            // ── Security findings ──
             if (result.security_findings?.length > 0) {
-              body += `### Security Findings\n`;
+              body += `### 🔒 Security Findings\n\n`;
+              const severityIcon = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢' };
               for (const sf of result.security_findings) {
-                body += `- **[${sf.severity.toUpperCase()}]** ${sf.category}: ${sf.description}\n`;
+                const sIcon = severityIcon[sf.severity] || '⚪';
+                body += `- ${sIcon} **[${sf.severity.toUpperCase()}]** ${sf.category}: ${sf.description}\n`;
               }
               body += '\n';
             }
 
+            // ── Adaptations applied ──
             if (result.adaptations_applied?.length > 0) {
-              body += `### Adaptations Applied\n`;
+              body += `### 🔧 Adaptations Applied\n\n`;
               for (const a of result.adaptations_applied) {
                 body += `- \`${a.file}\`: ${a.change}\n`;
               }
-              body += '\n⚠️ Code was modified. Pipeline will re-run to validate adaptations.\n\n';
+              body += '\n> ⚠️ Code was modified. The pipeline will re-run to validate adaptations.\n\n';
             }
 
-            body += `### Rationale\n${result.rationale}\n\n`;
+            // ── Rationale ──
+            body += `### Rationale\n\n${result.rationale}\n\n`;
 
-            if (decision === 'needs-review' || decision === 'breaking-change') {
-              body += `---\n💬 **Need deeper analysis?** Comment \`@claude\` on this PR for interactive follow-up with full MCP tool access.\n`;
+            // ── Footer ──
+            body += `---\n`;
+            body += `📋 [Pipeline run](${runUrl})`;
+
+            if (decision === 'auto-merge') {
+              body += ` · ✅ This PR was auto-merged.\n`;
+            } else if (decision === 'needs-review' || decision === 'breaking-change') {
+              body += `\n\n💬 **Need deeper analysis?** Comment \`@claude\` on this PR for interactive follow-up with full MCP tool access.\n`;
+            } else if (decision === 'needs-revalidation') {
+              body += ` · 🔄 Waiting for re-validation after code adaptations.\n`;
             }
 
             await github.rest.issues.createComment({

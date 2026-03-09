@@ -301,18 +301,30 @@ header "GitHub Repo Secrets"
 
 MISSING_SECRETS=()
 
+# Collect secrets from all sources (repo, org actions, org dependabot)
+# Any of these may fail due to permissions — that's OK
+REPO_SECRETS=$(gh secret list --repo "$GITHUB_REPO" 2>/dev/null || echo "")
+ORG_NAME=$(echo "$GITHUB_REPO" | cut -d'/' -f1)
+ORG_SECRETS=$(gh secret list --org "$ORG_NAME" 2>/dev/null || echo "")
+DEPENDABOT_REPO_SECRETS=$(gh secret list --repo "$GITHUB_REPO" --app dependabot 2>/dev/null || echo "")
+DEPENDABOT_ORG_SECRETS=$(gh secret list --org "$ORG_NAME" --app dependabot 2>/dev/null || echo "")
+ALL_SECRETS="${REPO_SECRETS}
+${ORG_SECRETS}
+${DEPENDABOT_REPO_SECRETS}
+${DEPENDABOT_ORG_SECRETS}"
+
 for secret_name in TFE_TOKEN CLAUDE_CODE_OAUTH_TOKEN TFE_TOKEN_DEPENDABOT; do
-  if gh secret list --repo "$GITHUB_REPO" 2>/dev/null | grep -q "^${secret_name}[[:space:]]"; then
+  if echo "$ALL_SECRETS" | grep -q "^${secret_name}[[:space:]]"; then
     success "${secret_name} already set"
   else
-    warn "${secret_name} not set"
+    warn "${secret_name} not found (checked repo and org secrets)"
     MISSING_SECRETS+=("$secret_name")
   fi
 done
 
 if [[ ${#MISSING_SECRETS[@]} -gt 0 ]]; then
   echo ""
-  printf "  ${C_WHITE}Set missing secrets:${C_RESET}\n"
+  printf "  ${C_WHITE}Set missing secrets (repo-level or org-level):${C_RESET}\n"
   for secret_name in "${MISSING_SECRETS[@]}"; do
     printf "     ${C_DIM}gh secret set %s --repo %s${C_RESET}\n" "$secret_name" "$GITHUB_REPO"
   done
