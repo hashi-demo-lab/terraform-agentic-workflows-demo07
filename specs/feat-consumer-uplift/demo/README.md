@@ -80,20 +80,31 @@ gh secret set TFE_TOKEN_DEPENDABOT --repo <owner/repo>
 
 ### Step 5: Publish a new module version to the PMR
 
-**This is the critical gap step.** Before triggering a version bump PR, the target version must actually exist in the private registry. This script tags the source module repo, and TFC automatically ingests it.
+**This is the critical gap step.** Before triggering a version bump PR, the target version must actually exist in the private registry.
+
+This module uses **branch-based publishing** — the source repo (`hashi-demo-lab/terraform-aws-s3-bucket`) has a `pr_merge.yml` workflow that auto-publishes to the PMR when a PR is merged to `main` with a semver label.
+
+The script drives this real pipeline end-to-end:
 
 ```bash
-# Auto-increment patch: 5.8.2 → 5.8.3
+# Patch bump (default): 5.8.2 → 5.8.3
 bash specs/feat-consumer-uplift/demo/publish-module-version.sh
 
-# Or specify a version explicitly
-bash specs/feat-consumer-uplift/demo/publish-module-version.sh --version 5.9.0
+# Minor bump: 5.8.2 → 5.9.0
+bash specs/feat-consumer-uplift/demo/publish-module-version.sh --bump minor
+
+# Major bump: 5.8.2 → 6.0.0
+bash specs/feat-consumer-uplift/demo/publish-module-version.sh --bump major
 ```
 
 The script:
-1. Creates a git tag (`vX.Y.Z`) on the source module repo via GitHub API
-2. Polls the PMR API until TFC ingests the new version (timeout: 3 min)
-3. Updates `MODULE_TARGET_VERSION` in `demo.env`
+1. Queries PMR for the current latest version
+2. Creates a branch + trivial commit on the source module repo
+3. Opens a PR with the `semver:patch/minor/major` label
+4. Waits for validation CI, then merges the PR
+5. Waits for `pr_merge.yml` to publish the new version to the PMR
+6. Polls until TFC ingests the version (timeout: 6 min)
+7. Updates `MODULE_TARGET_VERSION` in `demo.env`
 
 ### Step 6: Trigger the demo
 
@@ -121,7 +132,7 @@ Open the **Actions** tab in the GitHub repo to watch:
 bash specs/feat-consumer-uplift/demo/teardown.sh
 ```
 
-This destroys infrastructure, deletes the workspace, closes PRs, removes demo branches, cleans up the module tag from the source repo, and removes consumer `.tf` files.
+This destroys infrastructure, deletes the workspace, closes PRs, removes demo branches, deletes the published demo version from the PMR, and removes consumer `.tf` files.
 
 ## Demo Scenarios
 
@@ -146,7 +157,7 @@ Note: For multiple scenarios, publish a new version between each if you want dis
 | Script | Purpose |
 |--------|---------|
 | `setup.sh` | Creates TFC workspace, templates consumer code, commits to base branch, creates labels |
-| `publish-module-version.sh` | Tags source module repo → TFC ingests → updates `demo.env` with new version |
+| `publish-module-version.sh` | Creates PR on source repo → merges → CI publishes to PMR → updates `demo.env` |
 | `trigger-bump.sh` | Creates a dependabot-style PR with scenario-specific changes → triggers pipeline |
 | `teardown.sh` | Destroys infra, deletes workspace, closes PRs, cleans branches/tags/files |
 
@@ -202,5 +213,5 @@ Each presenter gets their own demo repo via `create-demo-repos.zsh`:
 | Labels not created | Run `setup.sh` again or create manually via `gh label create` |
 | Workspace delete fails | Resources may still exist; destroy via TFC UI first |
 | `trigger-bump.sh` refuses to run | `MODULE_TARGET_VERSION` must differ from `MODULE_CURRENT_VERSION` — run `publish-module-version.sh` first |
-| Module tag not ingested | Check the PMR in TFC UI; the source repo may need GitHub Actions to be enabled |
+| Module version stuck in pending | Branch-based modules need TFC to clone the repo; check VCS connection in TFC |
 | Wrong base branch for PR | Verify `BASE_BRANCH` in `demo.env` matches the branch with workflow files |

@@ -234,28 +234,30 @@ else
   fi
 fi
 
-# ─── Delete demo module tag from source repo ────────────────────────────────
-header "Cleaning Up Module Tags"
+# ─── Clean up source repo demo branches ──────────────────────────────────────
+header "Cleaning Up Source Repo"
 
 MODULE_SOURCE_REPO="${MODULE_SOURCE_REPO:-hashi-demo-lab/terraform-aws-s3-bucket}"
-MODULE_TARGET_VERSION="${MODULE_TARGET_VERSION:-}"
 
-if [[ -n "$MODULE_TARGET_VERSION" && "$MODULE_TARGET_VERSION" != "${MODULE_CURRENT_VERSION:-}" ]]; then
-  TAG_NAME="v${MODULE_TARGET_VERSION}"
-  info "Checking for demo tag ${TAG_NAME} on ${MODULE_SOURCE_REPO}..."
+# Delete any leftover demo branches on the source repo
+DEMO_BRANCHES=$(gh api "repos/${MODULE_SOURCE_REPO}/git/matching-refs/heads/demo/" \
+  --jq '.[].ref | sub("refs/heads/"; "")' 2>/dev/null || echo "")
 
-  if gh api "repos/${MODULE_SOURCE_REPO}/git/refs/tags/${TAG_NAME}" &>/dev/null; then
-    if gh api "repos/${MODULE_SOURCE_REPO}/git/refs/tags/${TAG_NAME}" --method DELETE &>/dev/null; then
-      success "Deleted tag ${TAG_NAME} from ${MODULE_SOURCE_REPO}"
+if [[ -n "$DEMO_BRANCHES" ]]; then
+  while IFS= read -r branch; do
+    if gh api "repos/${MODULE_SOURCE_REPO}/git/refs/heads/${branch}" --method DELETE &>/dev/null; then
+      success "Deleted source repo branch: ${branch}"
     else
-      warn "Could not delete tag ${TAG_NAME} — may need manual cleanup"
+      warn "Could not delete source repo branch: ${branch}"
     fi
-  else
-    info "Tag ${TAG_NAME} does not exist on ${MODULE_SOURCE_REPO}"
-  fi
+  done <<< "$DEMO_BRANCHES"
 else
-  info "No demo module tag to clean up (MODULE_TARGET_VERSION not set or same as current)"
+  info "No demo branches on ${MODULE_SOURCE_REPO}"
 fi
+
+# Note: We don't delete the published PMR version because it was published
+# via the source repo's CI pipeline (a real merge to main). The version
+# is a legitimate release. If cleanup is needed, do it via the TFC UI.
 
 # ─── Clean up local .tf files ───────────────────────────────────────────────
 header "Cleaning Local Files"

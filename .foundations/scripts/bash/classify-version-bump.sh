@@ -81,59 +81,93 @@ parse_module_changes() {
   while IFS= read -r line; do
     # Track current file
     if [[ "$line" =~ ^diff\ --git\ a/(.+\.tf) ]]; then
+      # Flush any pending module change from previous file
+      if [[ -n "$old_version" && -n "$new_version" && "$old_version" != "$new_version" ]]; then
+        local bump_type
+        bump_type=$(classify_semver "$old_version" "$new_version")
+        modules_json=$(echo "$modules_json" | jq \
+          --arg name "${module_name:-unknown}" \
+          --arg source "$module_source" \
+          --arg old "$old_version" \
+          --arg new "$new_version" \
+          --arg bump "$bump_type" \
+          --arg file "$current_file" \
+          '. += [{"module": $name, "source": $source, "old_version": $old, "new_version": $new, "bump_type": $bump, "file": $file}]')
+      fi
       current_file="${BASH_REMATCH[1]}"
-      continue
-    fi
-
-    # Detect module block context from surrounding lines
-    if [[ "$line" =~ ^@@.*@@.*module\ \"([^\"]+)\" ]]; then
-      module_name="${BASH_REMATCH[1]}"
-      in_module_block=true
+      in_module_block=false
+      module_name=""
       old_version=""
       new_version=""
       module_source=""
       continue
     fi
 
-    # Track module source
-    if [[ "$in_module_block" == true ]]; then
+    # On any @@ hunk boundary, flush pending version change before resetting
+    if [[ "$line" =~ ^@@ ]]; then
+      if [[ -n "$old_version" && -n "$new_version" && "$old_version" != "$new_version" ]]; then
+        local bump_type
+        bump_type=$(classify_semver "$old_version" "$new_version")
+        modules_json=$(echo "$modules_json" | jq \
+          --arg name "${module_name:-unknown}" \
+          --arg source "$module_source" \
+          --arg old "$old_version" \
+          --arg new "$new_version" \
+          --arg bump "$bump_type" \
+          --arg file "$current_file" \
+          '. += [{"module": $name, "source": $source, "old_version": $old, "new_version": $new, "bump_type": $bump, "file": $file}]')
+      fi
+      old_version=""
+      new_version=""
+
+      # Detect module block context from @@ hunk header
+      if [[ "$line" =~ ^@@.*@@.*module\ \"([^\"]+)\" ]]; then
+        module_name="${BASH_REMATCH[1]}"
+        in_module_block=true
+        module_source=""
+      fi
+      continue
+    fi
+
+    # Detect module block context from:
+    # - Context lines (space-prefixed, e.g.,  module "demo_bucket" {)
+    # - Added/removed lines (e.g., +module "demo_bucket" {)
+    if [[ "$line" =~ ^[\ +-].*module\ \"([^\"]+)\"\ \{ ]]; then
+      module_name="${BASH_REMATCH[1]}"
+      in_module_block=true
+      continue
+    fi
+
+    # Track module source (context, added, or removed lines)
+    if [[ "$in_module_block" == true || -z "$module_name" ]]; then
       if [[ "$line" =~ source[[:space:]]*=[[:space:]]*\"([^\"]+)\" ]]; then
         module_source="${BASH_REMATCH[1]}"
+        # If we see a registry source, we're in a module block even without explicit detection
+        if [[ "$module_source" == *"app.terraform.io"* || "$module_source" == *"registry.terraform.io"* ]]; then
+          in_module_block=true
+        fi
       fi
+    fi
 
-      # Detect version changes (both - and + lines)
+    # Detect version changes (both - and + lines)
+    if [[ "$in_module_block" == true ]]; then
       if [[ "$line" =~ ^-[[:space:]]*version[[:space:]]*=[[:space:]]*\"([^\"]+)\" ]]; then
         old_version="${BASH_REMATCH[1]}"
       fi
       if [[ "$line" =~ ^\+[[:space:]]*version[[:space:]]*=[[:space:]]*\"([^\"]+)\" ]]; then
         new_version="${BASH_REMATCH[1]}"
       fi
-
-      # End of hunk or new diff section
-      if [[ "$line" =~ ^@@|^diff\ --git ]]; then
-        if [[ -n "$old_version" && -n "$new_version" && "$old_version" != "$new_version" ]]; then
-          local bump_type
-          bump_type=$(classify_semver "$old_version" "$new_version")
-          modules_json=$(echo "$modules_json" | jq \
-            --arg name "$module_name" \
-            --arg source "$module_source" \
-            --arg old "$old_version" \
-            --arg new "$new_version" \
-            --arg bump "$bump_type" \
-            --arg file "$current_file" \
-            '. += [{"module": $name, "source": $source, "old_version": $old, "new_version": $new, "bump_type": $bump, "file": $file}]')
-        fi
-        in_module_block=false
-      fi
     fi
+
+    # Note: @@ hunk boundary flush is handled at the top of the loop
   done <<< "$diff_output"
 
   # Catch the last module if diff ends without a new hunk
-  if [[ "$in_module_block" == true && -n "$old_version" && -n "$new_version" && "$old_version" != "$new_version" ]]; then
+  if [[ -n "$old_version" && -n "$new_version" && "$old_version" != "$new_version" ]]; then
     local bump_type
     bump_type=$(classify_semver "$old_version" "$new_version")
     modules_json=$(echo "$modules_json" | jq \
-      --arg name "$module_name" \
+      --arg name "${module_name:-unknown}" \
       --arg source "$module_source" \
       --arg old "$old_version" \
       --arg new "$new_version" \
