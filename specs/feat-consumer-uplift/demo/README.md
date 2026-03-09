@@ -5,16 +5,16 @@ End-to-end demo of the consumer module uplift pipeline. Creates a TFC workspace,
 ## Architecture
 
 ```
-┌─────────────────────┐    tag vX.Y.Z     ┌──────────────────────────┐
-│ Source Module Repo   │ ──────────────►   │  HCP Terraform PMR      │
-│ (s3-bucket)          │   TFC ingests     │  s3-bucket/aws @ X.Y.Z  │
+┌─────────────────────┐   PR merge + CI     ┌──────────────────────────┐
+│ Source Module Repo   │ ──────────────────► │  HCP Terraform PMR      │
+│ (s3-bucket)          │   pr_merge.yml      │  s3-bucket/aws @ X.Y.Z  │
+└─────────────────────┘   publishes via API  └──────────────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────────┐   PR triggers      ┌──────────────────────────┐
+│ Demo Consumer Repo   │ ◄──────────────── │  trigger-bump.sh creates │
+│ (cloned template)    │   workflow         │  dependabot-style PR     │
 └─────────────────────┘                    └──────────────────────────┘
-                                                      │
-                                                      ▼
-┌─────────────────────┐   PR triggers    ┌──────────────────────────┐
-│ Demo Consumer Repo   │ ◄────────────── │  trigger-bump.sh creates │
-│ (cloned template)    │   workflow       │  dependabot-style PR     │
-└─────────────────────┘                  └──────────────────────────┘
         │
         ▼
 ┌───────────────────────────────────────────────────────────────────┐
@@ -27,11 +27,15 @@ End-to-end demo of the consumer module uplift pipeline. Creates a TFC workspace,
 
 - `gh` CLI authenticated to the target GitHub host
 - `TFE_TOKEN` environment variable set (org-level or team token)
-- `ANTHROPIC_API_KEY` available for GitHub Actions secrets
+- Claude Code OAuth token (from `~/.claude/.credentials.json` → `accessToken` field)
 - AWS credentials configured in the TFC project (variable set) for the sandbox workspace
 - Demo repo created via `create-demo-repos.zsh` and cloned locally
 
 ## End-to-End Walkthrough
+
+> **IMPORTANT**: All scripts must be run from the **demo repo clone**, not the template repo.
+> The template repo (`terraform-agentic-workflows`) is only for development. Scripts use
+> `git rev-parse --show-toplevel` to find the repo root and push to its `origin`.
 
 ### Step 1: Create a demo repo from the template
 
@@ -50,11 +54,13 @@ cd ~/Documents/repos/<demo-repo-name>
 cp specs/feat-consumer-uplift/demo/demo.env.example specs/feat-consumer-uplift/demo/demo.env
 
 # Edit demo.env — key settings:
-#   BASE_BRANCH   → "feat/consumer-module-uplift" (current dev branch)
-#                    Change to "main" once the workflow is merged
-#   TFE_ORG       → your TFC org
-#   TFE_PROJECT   → project with AWS credentials (variable set)
+#   BASE_BRANCH        → "feat/consumer-module-uplift" (current dev branch)
+#                         Change to "main" once the workflow is merged
+#   TFE_ORG            → your TFC org
+#   TFE_PROJECT        → project with AWS credentials (variable set)
+#   MODULE_SOURCE      → full PMR module source path
 #   MODULE_SOURCE_REPO → GitHub repo backing the PMR module
+#   DEMO_SCENARIO      → patch | minor | breaking | no-op
 ```
 
 ### Step 3: Setup (workspace + consumer code)
@@ -70,76 +76,121 @@ This creates:
 
 If `terraform init/plan` fails (e.g. no AWS creds in workspace yet), that's OK — the workflow will handle it. Add `SKIP_PLAN=true` to skip.
 
-### Step 4: Set GitHub secrets
+### Step 4: Set default branch
+
+The `claude-code-action` requires the workflow file to exist on the **default branch**. Change it:
+
+```bash
+gh repo edit <owner/repo> --default-branch feat/consumer-module-uplift
+```
+
+Once the workflow is merged to `main`, reset to `gh repo edit <owner/repo> --default-branch main`.
+
+### Step 5: Set GitHub secrets
 
 ```bash
 gh secret set TFE_TOKEN --repo <owner/repo>
-gh secret set ANTHROPIC_API_KEY --repo <owner/repo>
+gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner/repo>
 gh secret set TFE_TOKEN_DEPENDABOT --repo <owner/repo>
 ```
 
-### Step 5: Publish a new module version to the PMR
+**`CLAUDE_CODE_OAUTH_TOKEN`**: Get the value from `~/.claude/.credentials.json` → `accessToken` field. This is used by `claude-code-action` for the AI Analysis step. (An `ANTHROPIC_API_KEY` also works if you have API credits, but OAuth token uses your Claude Pro/Team subscription instead.)
 
-**This is the critical gap step.** Before triggering a version bump PR, the target version must actually exist in the private registry.
+### Step 6: Verify `.mcp.json` in demo repo
+
+The demo repo's `.mcp.json` must use **npx-based** MCP servers (not Docker) for GitHub Actions compatibility:
+
+```json
+{
+  "mcpServers": {
+    "terraform": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/terraform-mcp-server@latest", "--toolsets=all"],
+      "env": { "TFE_TOKEN": "${TFE_TOKEN}" }
+    }
+  }
+}
+```
+
+`claude-code-action` hardcodes `enableAllProjectMcpServers: true`, so a Docker-based config will crash the action in CI where Docker isn't available.
+
+### Step 7: Publish a new module version to the PMR
+
+**Always run this before `trigger-bump.sh`.** The target version must exist in the PMR.
 
 This module uses **branch-based publishing** — the source repo (`hashi-demo-lab/terraform-aws-s3-bucket`) has a `pr_merge.yml` workflow that auto-publishes to the PMR when a PR is merged to `main` with a semver label.
 
-The script drives this real pipeline end-to-end:
-
 ```bash
-# Patch bump (default): 5.8.2 → 5.8.3
+# Patch bump (default): e.g. 5.8.5 → 5.8.6
 bash specs/feat-consumer-uplift/demo/publish-module-version.sh
 
-# Minor bump: 5.8.2 → 5.9.0
+# Minor bump: e.g. 5.8.5 → 5.9.0
 bash specs/feat-consumer-uplift/demo/publish-module-version.sh --bump minor
 
-# Major bump: 5.8.2 → 6.0.0
+# Major bump: e.g. 5.8.5 → 6.0.0
 bash specs/feat-consumer-uplift/demo/publish-module-version.sh --bump major
 ```
 
 The script:
 1. Queries PMR for the current latest version
-2. Creates a branch + trivial commit on the source module repo
-3. Opens a PR with the `semver:patch/minor/major` label
-4. Waits for validation CI, then merges the PR
-5. Waits for `pr_merge.yml` to publish the new version to the PMR
-6. Polls until TFC ingests the version (timeout: 6 min)
-7. Updates `MODULE_TARGET_VERSION` in `demo.env`
+2. Calculates the next version based on bump type
+3. Creates a branch + trivial commit on the source module repo
+4. Opens a PR with the `semver:patch/minor/major` label
+5. Waits for validation CI, then merges the PR
+6. Waits for `pr_merge.yml` to publish the new version to the PMR
+7. Polls until TFC ingests the version (timeout: 6 min)
+8. Updates `MODULE_TARGET_VERSION` and `MODULE_CURRENT_VERSION` in local `demo.env`
 
-### Step 6: Trigger the demo
+### Step 8: Trigger the demo
 
 ```bash
 # Uses default scenario from demo.env
 bash specs/feat-consumer-uplift/demo/trigger-bump.sh
 
 # Or pick a specific scenario
-bash specs/feat-consumer-uplift/demo/trigger-bump.sh --scenario patch
+bash specs/feat-consumer-uplift/demo/trigger-bump.sh --scenario minor
 ```
 
 This creates a PR with a `dependabot/terraform/` branch prefix, which triggers the consumer uplift workflow.
 
-### Step 7: Watch the pipeline
+The version replacement uses a flexible regex that matches any existing constraint format (`"5.8.5"`, `"~> 5.8.5"`, `">= 5.8.5"`, etc.), so it works regardless of what previous runs left on the base branch.
+
+### Step 9: Watch the pipeline
 
 Open the **Actions** tab in the GitHub repo to watch:
-1. **Classify** — detects semver type from the diff
-2. **Validate** — runs `terraform fmt/init/validate/plan`
-3. **AI Analysis** — Claude analyzes the upgrade (if plan shows changes)
-4. **Decision** — labels, comments, and optionally auto-merges
+1. **Classify** — detects semver type from the git diff
+2. **Validate** — runs `terraform fmt/init/validate/plan` against TFC workspace
+3. **AI Analysis** — Claude analyzes the upgrade via `claude-code-action` (if plan shows changes)
+4. **Decision** — labels, comments with structured analysis, and optionally auto-merges
 
-### Step 8: Clean up
+### Step 10: Clean up
 
 ```bash
 bash specs/feat-consumer-uplift/demo/teardown.sh
 ```
 
-This destroys infrastructure, deletes the workspace, closes PRs, removes demo branches, deletes the published demo version from the PMR, and removes consumer `.tf` files.
+This destroys infrastructure, deletes the workspace, closes PRs, removes demo branches, and removes consumer `.tf` files.
+
+## Repeating the Demo
+
+To trigger another run **without full teardown/setup**:
+
+```bash
+# 1. Publish a new version (auto-detects current, bumps, updates demo.env)
+bash specs/feat-consumer-uplift/demo/publish-module-version.sh --bump patch
+
+# 2. Trigger (reads updated demo.env, creates PR)
+bash specs/feat-consumer-uplift/demo/trigger-bump.sh --scenario patch
+```
+
+This works repeatedly — each cycle publishes a new PMR version and creates a fresh PR. No manual `demo.env` editing needed between runs.
 
 ## Demo Scenarios
 
 | Scenario | What Changes | Pipeline Path | Best For Showing |
 |----------|-------------|---------------|-----------------|
-| `patch` | Version constraint + tag | Classify → Validate (exit 2) → AI Analysis → Decision | Auto-merge for low-risk patches |
-| `minor` | Version + logging config + new output | Classify → Validate (exit 2) → AI Analysis → Decision | Full AI analysis with config adaptation |
+| `patch` | Version constraint + DemoRun tag | Classify → Validate (exit 2) → AI Analysis → Decision | Auto-merge for low-risk patches |
+| `minor` | Version + logging config + new output | Classify → Validate (exit 2) → AI Analysis → Decision | Full AI analysis with config changes |
 | `breaking` | Version + invalid output reference | Classify → Validate (exit 1) → Breaking label | Breaking change detection and blocking |
 | `no-op` | Constraint format change only | Classify → Validate (exit 0) → PR auto-closed | No-change detection with explanation |
 
@@ -157,9 +208,9 @@ Note: For multiple scenarios, publish a new version between each if you want dis
 | Script | Purpose |
 |--------|---------|
 | `setup.sh` | Creates TFC workspace, templates consumer code, commits to base branch, creates labels |
-| `publish-module-version.sh` | Creates PR on source repo → merges → CI publishes to PMR → updates `demo.env` |
+| `publish-module-version.sh` | Drives source repo CI: creates PR → merges → publishes to PMR → updates `demo.env` |
 | `trigger-bump.sh` | Creates a dependabot-style PR with scenario-specific changes → triggers pipeline |
-| `teardown.sh` | Destroys infra, deletes workspace, closes PRs, cleans branches/tags/files |
+| `teardown.sh` | Destroys infra, deletes workspace, closes PRs, cleans branches/files |
 
 ## Configuration Reference
 
@@ -173,10 +224,10 @@ Note: For multiple scenarios, publish a new version between each if you want dis
 | `GITHUB_REPO` | (auto from git remote) | GitHub repo (owner/name) |
 | `MODULE_NAME` | `s3-bucket` | PMR module name |
 | `MODULE_SOURCE` | `app.terraform.io/hashi-demos-apj/s3-bucket/aws` | Full module source |
-| `MODULE_CURRENT_VERSION` | `5.8.2` | Starting version in consumer code |
-| `MODULE_TARGET_VERSION` | `5.8.2` | Version to bump to (set by `publish-module-version.sh`) |
+| `MODULE_CURRENT_VERSION` | (set by publish script) | Current version on base branch |
+| `MODULE_TARGET_VERSION` | (set by publish script) | Version to bump to — must exist in PMR |
 | `MODULE_SOURCE_REPO` | `hashi-demo-lab/terraform-aws-s3-bucket` | VCS repo backing the PMR module |
-| `MODULE_SOURCE_BRANCH` | `master` | Branch to tag for new versions |
+| `MODULE_SOURCE_BRANCH` | `master` | Default branch of the source module repo |
 | `AWS_REGION` | `ap-southeast-2` | AWS region |
 | `DEMO_SCENARIO` | `patch` | Default trigger scenario |
 
@@ -185,9 +236,10 @@ Note: For multiple scenarios, publish a new version between each if you want dis
 This workflow currently lives on the `feat/consumer-module-uplift` branch. When testing:
 
 - Set `BASE_BRANCH="feat/consumer-module-uplift"` in `demo.env`
+- **Set the demo repo's default branch** to `feat/consumer-module-uplift` (required for `claude-code-action`)
 - The demo repo (created from template) includes this branch
 - PRs will be created against this branch, not `main`
-- Once the workflow is merged to `main`, change `BASE_BRANCH` to `"main"`
+- Once the workflow is merged to `main`, change `BASE_BRANCH` to `"main"` and reset the default branch
 
 ## Multi-Person Demo Setup
 
@@ -207,11 +259,18 @@ Each presenter gets their own demo repo via `create-demo-repos.zsh`:
 | Issue | Fix |
 |-------|-----|
 | Pipeline doesn't trigger | Check branch name starts with `dependabot/terraform/` and PR changes `*.tf` files |
-| `terraform init` fails | Verify `TFE_TOKEN` secret is set and workspace exists |
-| Plan shows no changes | Expected for `no-op` scenario. For others, verify module version actually differs |
+| Classify says "No module version changes" | The version sed replacement didn't match. Verify `main.tf` on base branch — the `replace_version()` function handles any constraint format, but check the diff actually shows a version change |
+| `terraform init` fails with "failed to create backend alias" | Remove `TF_WORKSPACE: ""` from workflow env block — empty string conflicts with cloud backend |
+| Plan exit code always 0 | Must use `PIPESTATUS[0]` when piping terraform through `tee` — `tee` always exits 0 |
+| AI analysis crashes instantly (0 cost, ~200ms) | `.mcp.json` uses Docker-based MCP server. Replace with npx-based config (see Step 6) |
+| "Credit balance is too low" in AI step | Switch from `ANTHROPIC_API_KEY` to `CLAUDE_CODE_OAUTH_TOKEN` (uses Claude subscription) |
+| "JSON parse failure — defaulting to needs-review" | Parse step must read from `$RUNNER_TEMP/claude-execution-output.json`, not PR comments |
 | AI analysis job skipped | Only runs when plan exit code is 2 (changes detected) |
+| Workflow not found by claude-code-action | Default branch must have the workflow file (see Step 4) |
 | Labels not created | Run `setup.sh` again or create manually via `gh label create` |
 | Workspace delete fails | Resources may still exist; destroy via TFC UI first |
 | `trigger-bump.sh` refuses to run | `MODULE_TARGET_VERSION` must differ from `MODULE_CURRENT_VERSION` — run `publish-module-version.sh` first |
 | Module version stuck in pending | Branch-based modules need TFC to clone the repo; check VCS connection in TFC |
 | Wrong base branch for PR | Verify `BASE_BRANCH` in `demo.env` matches the branch with workflow files |
+| Scripts modify template repo instead of demo | You ran from the template repo. Always `cd` into the **demo repo clone** first |
+| `OIDC token missing` error in AI step | Add `id-token: write` to workflow permissions |
