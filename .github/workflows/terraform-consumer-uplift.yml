@@ -114,8 +114,10 @@ jobs:
         id: plan
         run: |
           set +e
+          set -o pipefail
           terraform plan -detailed-exitcode -input=false -out=tfplan 2>&1 | tee plan_output.txt
-          PLAN_EXIT=$?
+          PLAN_EXIT=${PIPESTATUS[0]}
+          set +o pipefail
           set -e
 
           echo "exitcode=${PLAN_EXIT}" >> "$GITHUB_OUTPUT"

@@ -23,6 +23,7 @@ module "demo_bucket" {
 
   tags = {
     Environment = var.environment
+    Application = "consumer-uplift-demo"
     Project     = var.project
     ManagedBy   = "terraform"
     Purpose     = "consumer-uplift-demo"
