@@ -1047,42 +1047,47 @@ details.ed-card[open]::details-content { height: auto; }
     <tr>
       <td>.github/workflows/terraform-consumer-uplift.yml</td>
       <td><span class="node node-script">workflow</span></td>
-      <td>Main pipeline (4 jobs) + @claude interactive (1 job)</td>
+      <td>The main pipeline. Runs 4 jobs on PR open/sync (classify semver &rarr; validate terraform &rarr; risk assess &rarr; decision) plus an interactive job triggered by <code>@claude</code> comments. Orchestrates the entire uplift process.</td>
     </tr>
     <tr>
       <td>.github/workflows/terraform-apply.yml</td>
       <td><span class="node node-script">workflow</span></td>
-      <td>Post-merge apply + rollback on failure</td>
-    </tr>
-    <tr>
-      <td>.github/workflows/module-update-tracker.yml</td>
-      <td><span class="node node-ref">optional</span></td>
-      <td>Phase D: Self-updating dashboard issue for pending upgrades</td>
+      <td>Runs after a PR merges to main. Uploads the Terraform config to HCP Terraform, creates a run, and applies it. If apply fails, creates an incident issue and a draft rollback PR.</td>
     </tr>
     <tr>
       <td>.claude/agents/module-upgrade-remediation.md</td>
       <td><span class="node node-agent">agent</span></td>
-      <td>@claude remediation playbook for module upgrades</td>
+      <td>The playbook Claude reads when invoked via <code>@claude</code> on a PR. Tells it how to diagnose plan failures, compare old/new module interfaces via MCP, fix consumer <code>.tf</code> files, validate, and push. Auto-loaded by <code>claude-code-action</code> because it lives in <code>.claude/</code>.</td>
     </tr>
     <tr>
       <td>.foundations/scripts/bash/classify-version-bump.sh</td>
       <td><span class="node node-script">script</span></td>
-      <td>Parse git diff, classify semver bump type</td>
+      <td>Used by Job 1. Parses the <code>git diff</code> of a PR to find module <code>source</code> URL changes, extracts old/new version numbers, and classifies the bump as patch, minor, or major.</td>
     </tr>
     <tr>
       <td>.foundations/scripts/bash/scan-module-versions.sh</td>
       <td><span class="node node-script">script</span></td>
-      <td>TFC API fallback scanner for version detection</td>
+      <td>Fallback scanner that queries the HCP Terraform private registry API directly. Catches module updates that Dependabot misses (e.g. submodule paths like <code>//modules/foo</code>). Runs on a cron schedule.</td>
     </tr>
     <tr>
       <td>.github/dependabot.yml</td>
       <td><span class="node node-ref">config</span></td>
-      <td>Private registry module scanning (monthly)</td>
+      <td>Configures Dependabot to scan the private Terraform registry monthly for new module versions. When it finds one, it opens a PR with the version bump &mdash; which triggers the main pipeline.</td>
     </tr>
     <tr>
       <td>.mcp-ci.json</td>
       <td><span class="node node-mcp">config</span></td>
-      <td>Terraform MCP server for CI (npx, no Docker)</td>
+      <td>MCP server config for CI environments. Points to the Terraform MCP server via <code>npx</code> (not Docker, since Actions runners don&rsquo;t have Docker by default). Gives <code>@claude</code> access to <code>get_private_module_details</code> and other registry tools during the interactive fix job.</td>
+    </tr>
+    <tr>
+      <td>.claude-pipeline-context.md</td>
+      <td><span class="node node-artifact">dynamic</span></td>
+      <td>Not checked in. Written dynamically by the workflow&rsquo;s &ldquo;Collect pipeline context&rdquo; step right before invoking <code>@claude</code>. Contains current PR labels, pipeline outcome, and <code>terraform plan</code> output so Claude has immediate context without re-running plan.</td>
+    </tr>
+    <tr>
+      <td>.github/workflows/module-update-tracker.yml</td>
+      <td><span class="node node-ref">deferred</span></td>
+      <td>Phase D (not yet implemented). A dashboard workflow that aggregates all pending module upgrades into a single self-updating tracking issue, giving visibility across the estate.</td>
     </tr>
   </table>
 </div>
