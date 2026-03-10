@@ -8,8 +8,8 @@
 #   4. Templates consumer Terraform code with org/workspace/module values
 #   5. Creates GitHub labels for the pipeline
 #   6. Commits consumer code to the demo repo's base branch
-#   7. Verifies GitHub secrets (TFE_TOKEN, TFE_TOKEN_DEPENDABOT inherited from org;
-#      CLAUDE_CODE_OAUTH_TOKEN set repo-level from ~/.claude/.credentials.json)
+#   7. Creates GitHub secrets as placeholders (TFE_TOKEN, TFE_TOKEN_DEPENDABOT,
+#      CLAUDE_CODE_OAUTH_TOKEN) — add values via repo settings after setup
 #   8. Prints next steps (publish + trigger)
 #
 # Prerequisites:
@@ -315,56 +315,33 @@ else
   fi
 fi
 
-# ─── Verify GitHub secrets ─────────────────────────────────────────────────
+# ─── Create GitHub secrets (placeholder — add values via repo settings) ────
 header "GitHub Secrets"
 
-# Use the repo-level API to check what's set at repo scope.
-# Org-inherited secrets are invisible to the API (requires admin:org) but
-# work in workflows. We only set repo-level secrets when truly missing.
-REPO_ACTION_SECRETS=$(gh api "repos/${GITHUB_REPO}/actions/secrets" --jq '.secrets[].name' 2>/dev/null || echo "")
-REPO_DEPENDABOT_SECRETS=$(gh api "repos/${GITHUB_REPO}/dependabot/secrets" --jq '.secrets[].name' 2>/dev/null || echo "")
+# Create all three secrets as repo-level. Values default to "REPLACE_ME" —
+# update them in the repo settings UI or via gh secret set after setup.
+PLACEHOLDER="REPLACE_ME"
 
-# ── check_secret(name, source_list) — returns 0 if found ──
-has_secret() { echo "$2" | grep -qx "$1" 2>/dev/null; }
-
-# TFE_TOKEN — Actions secret (for the uplift workflow)
-if has_secret "TFE_TOKEN" "$REPO_ACTION_SECRETS"; then
-  success "TFE_TOKEN set (repo-level)"
-else
-  success "TFE_TOKEN inherited from org"
-fi
-
-# TFE_TOKEN_DEPENDABOT — Dependabot secret (separate store from Actions)
-# Dependabot can't read Actions secrets — it needs its own via --app dependabot.
-if has_secret "TFE_TOKEN_DEPENDABOT" "$REPO_DEPENDABOT_SECRETS"; then
-  success "TFE_TOKEN_DEPENDABOT set (repo-level dependabot)"
-else
-  success "TFE_TOKEN_DEPENDABOT inherited from org"
-fi
-
-# CLAUDE_CODE_OAUTH_TOKEN — for @claude interactive fix (always repo-level)
-if has_secret "CLAUDE_CODE_OAUTH_TOKEN" "$REPO_ACTION_SECRETS"; then
-  success "CLAUDE_CODE_OAUTH_TOKEN set (repo-level)"
-else
-  CLAUDE_CREDS_FILE="${HOME}/.claude/.credentials.json"
-  OAUTH_TOKEN=""
-  if [[ -f "$CLAUDE_CREDS_FILE" ]]; then
-    OAUTH_TOKEN=$(jq -r '.accessToken // empty' "$CLAUDE_CREDS_FILE" 2>/dev/null || echo "")
-  fi
-
-  if [[ -n "$OAUTH_TOKEN" ]]; then
-    info "Setting CLAUDE_CODE_OAUTH_TOKEN from ~/.claude/.credentials.json..."
-    if echo "$OAUTH_TOKEN" | gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo "$GITHUB_REPO" 2>/dev/null; then
-      success "CLAUDE_CODE_OAUTH_TOKEN secret set"
-    else
-      warn "Failed to set CLAUDE_CODE_OAUTH_TOKEN — set it manually"
-    fi
+for SECRET in TFE_TOKEN CLAUDE_CODE_OAUTH_TOKEN; do
+  if gh api "repos/${GITHUB_REPO}/actions/secrets/${SECRET}" --silent 2>/dev/null; then
+    success "${SECRET} already set"
   else
-    warn "CLAUDE_CODE_OAUTH_TOKEN not found"
-    info "Could not read accessToken from ~/.claude/.credentials.json"
-    printf "     ${C_DIM}Set manually: gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo %s${C_RESET}\n" "$GITHUB_REPO"
+    echo "$PLACEHOLDER" | gh secret set "$SECRET" --repo "$GITHUB_REPO" 2>/dev/null \
+      && success "${SECRET} created (needs value)" \
+      || warn "Failed to create ${SECRET}"
   fi
+done
+
+# TFE_TOKEN_DEPENDABOT — Dependabot secret (separate store from Actions secrets)
+if gh api "repos/${GITHUB_REPO}/dependabot/secrets/TFE_TOKEN_DEPENDABOT" --silent 2>/dev/null; then
+  success "TFE_TOKEN_DEPENDABOT already set"
+else
+  echo "$PLACEHOLDER" | gh secret set TFE_TOKEN_DEPENDABOT --repo "$GITHUB_REPO" --app dependabot 2>/dev/null \
+    && success "TFE_TOKEN_DEPENDABOT created (needs value)" \
+    || warn "Failed to create TFE_TOKEN_DEPENDABOT"
 fi
+
+info "Set secret values at: https://github.com/${GITHUB_REPO}/settings/secrets/actions"
 
 # ─── Print next steps ───────────────────────────────────────────────────────
 header "Setup Complete"

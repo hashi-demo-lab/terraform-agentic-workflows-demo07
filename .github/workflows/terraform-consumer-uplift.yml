@@ -19,7 +19,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+  # Dependabot-triggered PRs can only access Dependabot secrets (not Actions secrets).
+  # TFE_TOKEN_DEPENDABOT is set as a Dependabot secret with its own RBAC permissions.
+  TFE_TOKEN: ${{ github.actor == 'dependabot[bot]' && secrets.TFE_TOKEN_DEPENDABOT || secrets.TFE_TOKEN }}
 
 jobs:
   # ─────────────────────────────────────────────────
@@ -100,6 +102,7 @@ jobs:
       plan_exitcode: ${{ steps.plan.outputs.exitcode }}
       plan_summary: ${{ steps.plan-summary.outputs.summary }}
       plan_resources: ${{ steps.plan-summary.outputs.plan_resources }}
+      run_url: ${{ steps.plan.outputs.run_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,7 +112,7 @@ jobs:
         with:
           terraform_wrapper: false
           cli_config_credentials_hostname: app.terraform.io
-          cli_config_credentials_token: ${{ secrets.TFE_TOKEN }}
+          cli_config_credentials_token: ${{ env.TFE_TOKEN }}
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
@@ -138,6 +141,10 @@ jobs:
 
           echo "exitcode=${PLAN_EXIT}" >> "$GITHUB_OUTPUT"
 
+          # Extract TFC run URL (CLI-driven workspaces print this during remote plan)
+          RUN_URL=$(grep -oP 'https://app\.terraform\.io/\S+' plan_output.txt | head -1 || true)
+          echo "run_url=${RUN_URL}" >> "$GITHUB_OUTPUT"
+
           case $PLAN_EXIT in
             0)
               {
@@ -146,6 +153,10 @@ jobs:
                 echo "> **Result**: No changes — workspace already at target version."
                 echo ""
                 echo "The PR will be auto-closed."
+                if [[ -n "$RUN_URL" ]]; then
+                  echo ""
+                  echo "> :link: [View TFC Run](${RUN_URL})"
+                fi
               } >> "$GITHUB_STEP_SUMMARY"
               ;;
             1)
@@ -161,6 +172,10 @@ jobs:
                 echo '```'
                 echo ""
                 echo "</details>"
+                if [[ -n "$RUN_URL" ]]; then
+                  echo ""
+                  echo "> :link: [View TFC Run](${RUN_URL})"
+                fi
               } >> "$GITHUB_STEP_SUMMARY"
               ;;
             2)
@@ -204,6 +219,10 @@ jobs:
 
                 if [[ -n "$PLAN_LINE" ]]; then
                   echo "> ${PLAN_LINE}"
+                fi
+                if [[ -n "$RUN_URL" ]]; then
+                  echo ""
+                  echo "> :link: [View TFC Run](${RUN_URL})"
                 fi
               } >> "$GITHUB_STEP_SUMMARY"
               ;;
@@ -254,11 +273,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const tfcRunUrl = '${{ steps.plan.outputs.run_url }}';
+            let footer = `\n---\n📋 [Pipeline run](${runUrl})`;
+            if (tfcRunUrl) footer += ` · :link: [TFC Run](${tfcRunUrl})`;
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `### No Changes Detected\n\nThe Terraform plan shows no infrastructure changes for this module version bump. This typically means the workspace already reflects the target version (applied via another path).\n\n**Action**: Closing this PR as no changes are needed.\n\n_If this is unexpected, re-open the PR and investigate._`
+              body: `### No Changes Detected\n\nThe Terraform plan shows no infrastructure changes for this module version bump. This typically means the workspace already reflects the target version (applied via another path).\n\n**Action**: Closing this PR as no changes are needed.\n\n_If this is unexpected, re-open the PR and investigate._${footer}`
             });
             await github.rest.pulls.update({
               owner: context.repo.owner,
@@ -267,11 +291,17 @@ jobs:
               state: 'closed'
             });
 
-      - name: Handle plan error (exit 1) — label breaking
+      - name: Handle plan error (exit 1) — label + auto-trigger Claude
         if: steps.plan.outputs.exitcode == '1'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GH_PAT || github.token }}
           script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const tfcRunUrl = '${{ steps.plan.outputs.run_url }}';
+            let footer = `📋 [Pipeline run](${runUrl})`;
+            if (tfcRunUrl) footer += ` · :link: [TFC Run](${tfcRunUrl})`;
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -282,8 +312,23 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `### Terraform Plan Failed\n\nThe plan command returned an error, indicating this module version bump introduces breaking changes that prevent planning.\n\n**Action**: This PR is blocked. Comment \`@claude\` on this PR to diagnose the error, fix the consumer code, and push — the pipeline will re-run automatically.\n\ncc @claude`
+              body: `### 🚨 Terraform Plan Failed\n\nThe plan command returned an error, indicating this module version bump introduces breaking changes that prevent planning.\n\n---\n${footer}`
             });
+
+            // Auto-trigger Claude review (prevents loops by checking for existing comment)
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            if (!comments.some(c => c.body.includes('@claude review and make a recommendation'))) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '@claude review and make a recommendation'
+              });
+            }
 
   # ─────────────────────────────────────────────────
   # Job 3: RISK ASSESSMENT — Deterministic decision matrix
@@ -424,6 +469,7 @@ jobs:
         env:
           ANALYSIS_RESULT: ${{ needs.risk-assessment.outputs.analysis_result }}
           VERSION_TYPE: ${{ needs.classify.outputs.version_type }}
+          TFC_RUN_URL: ${{ needs.validate.outputs.run_url }}
         run: |
           echo "decision=$(echo "$ANALYSIS_RESULT" | jq -r '.decision')" >> "$GITHUB_OUTPUT"
           echo "risk_level=$(echo "$ANALYSIS_RESULT" | jq -r '.risk_level')" >> "$GITHUB_OUTPUT"
@@ -446,6 +492,10 @@ jobs:
             echo ":${ICON}: **${DECISION}** (risk: \`${RISK}\`, version: \`${VERSION_TYPE}\`)"
             echo ""
             echo "**Action**: ${ACTION}"
+            if [[ -n "$TFC_RUN_URL" ]]; then
+              echo ""
+              echo ":link: [View TFC Run](${TFC_RUN_URL})"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply labels
@@ -494,13 +544,15 @@ jobs:
               });
             }
 
-      - name: Post analysis comment
+      - name: Post analysis comment + auto-trigger Claude review
         uses: actions/github-script@v7
         env:
           ANALYSIS_RESULT: ${{ needs.risk-assessment.outputs.analysis_result }}
           MODULES_CHANGED: ${{ needs.classify.outputs.modules_changed }}
           PLAN_RESOURCES: ${{ needs.validate.outputs.plan_resources }}
+          TFC_RUN_URL: ${{ needs.validate.outputs.run_url }}
         with:
+          github-token: ${{ secrets.GH_PAT || github.token }}
           script: |
             const result = JSON.parse(process.env.ANALYSIS_RESULT);
             const modulesChanged = JSON.parse(process.env.MODULES_CHANGED);
@@ -560,13 +612,17 @@ jobs:
             body += `### Rationale\n\n${result.rationale}\n\n`;
 
             // ── Footer ──
+            const tfcRunUrl = process.env.TFC_RUN_URL || '';
             body += `---\n`;
             body += `📋 [Pipeline run](${runUrl})`;
+            if (tfcRunUrl) {
+              body += ` · :link: [TFC Run](${tfcRunUrl})`;
+            }
 
             if (decision === 'auto-merge') {
-              body += ` · ✅ This PR was auto-merged.\n`;
+              body += `\n\n✅ This PR was auto-merged.\n`;
             } else if (decision === 'needs-review' || decision === 'breaking-change') {
-              body += `\n\n🔧 **Need this fixed?** Comment \`@claude\` on this PR — it will diagnose the issue, fix the consumer code, and push. The pipeline re-runs automatically after the fix.\n`;
+              body += `\n\n🔧 Claude will automatically review this PR and make a recommendation.\n`;
             }
 
             await github.rest.issues.createComment({
@@ -575,6 +631,25 @@ jobs:
               issue_number: context.issue.number,
               body: body
             });
+
+            // Auto-trigger Claude review for needs-review and breaking-change.
+            // Uses GH_PAT so the comment triggers a new issue_comment workflow run.
+            // Loop prevention: skip if already requested.
+            if (decision === 'needs-review' || decision === 'breaking-change') {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+              });
+              if (!comments.some(c => c.body.includes('@claude review and make a recommendation'))) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: '@claude review and make a recommendation'
+                });
+              }
+            }
 
       # Auto-merge for low-risk patches/minor
       - name: Auto-merge
@@ -635,7 +710,7 @@ jobs:
         with:
           terraform_wrapper: false
           cli_config_credentials_hostname: app.terraform.io
-          cli_config_credentials_token: ${{ secrets.TFE_TOKEN }}
+          cli_config_credentials_token: ${{ env.TFE_TOKEN }}
 
       - name: Collect pipeline context
         id: context
