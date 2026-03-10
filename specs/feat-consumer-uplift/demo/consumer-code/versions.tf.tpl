@@ -3,9 +3,11 @@ terraform {
 
   cloud {
     organization = "__TFE_ORG__"
+    hostname     = "__TFE_HOSTNAME__"
 
     workspaces {
-      name = "__TFE_WORKSPACE__"
+      name    = "__TFE_WORKSPACE__"
+      project = "__TFE_PROJECT__"
     }
   }
 

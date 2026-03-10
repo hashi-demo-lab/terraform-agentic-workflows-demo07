@@ -222,6 +222,8 @@ for tpl_file in "${CONSUMER_SRC}"/*.tf.tpl; do
   info "Templating ${filename}"
   sed \
     -e "s|__TFE_ORG__|${TFE_ORG}|g" \
+    -e "s|__TFE_HOSTNAME__|${TFE_HOSTNAME}|g" \
+    -e "s|__TFE_PROJECT__|${TFE_PROJECT}|g" \
     -e "s|__TFE_WORKSPACE__|${TFE_WORKSPACE}|g" \
     -e "s|__MODULE_SOURCE__|${MODULE_SOURCE}|g" \
     -e "s|__MODULE_VERSION__|${MODULE_CURRENT_VERSION}|g" \
