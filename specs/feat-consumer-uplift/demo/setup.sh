@@ -5,9 +5,11 @@
 #   1. Loads configuration from demo.env
 #   2. Creates an HCP Terraform workspace (CLI-driven) in the sandbox project
 #   3. Templates consumer Terraform code with org/workspace/module values
-#   4. Commits consumer code to the demo repo's main branch
-#   5. Pushes to remote so the workspace can pick it up
-#   6. Prints next steps (secrets to configure)
+#   4. Creates GitHub labels for the pipeline
+#   5. Commits consumer code to the demo repo's base branch
+#   6. Sets GitHub secrets (TFE_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, TFE_TOKEN_DEPENDABOT)
+#   7. Sets the repo default branch to BASE_BRANCH (required for claude-code-action)
+#   8. Prints next steps (publish + trigger)
 #
 # Prerequisites:
 #   - gh CLI authenticated
@@ -299,8 +301,6 @@ fi
 # ─── Check & set GitHub secrets ────────────────────────────────────────────
 header "GitHub Repo Secrets"
 
-MISSING_SECRETS=()
-
 # Collect secrets from all sources (repo, org actions, org dependabot)
 # Any of these may fail due to permissions — that's OK
 REPO_SECRETS=$(gh secret list --repo "$GITHUB_REPO" 2>/dev/null || echo "")
@@ -313,21 +313,73 @@ ${ORG_SECRETS}
 ${DEPENDABOT_REPO_SECRETS}
 ${DEPENDABOT_ORG_SECRETS}"
 
-for secret_name in TFE_TOKEN CLAUDE_CODE_OAUTH_TOKEN TFE_TOKEN_DEPENDABOT; do
-  if echo "$ALL_SECRETS" | grep -q "^${secret_name}[[:space:]]"; then
-    success "${secret_name} already set"
+# TFE_TOKEN — set from environment variable
+if echo "$ALL_SECRETS" | grep -q "^TFE_TOKEN[[:space:]]"; then
+  success "TFE_TOKEN already set"
+else
+  info "Setting TFE_TOKEN secret from environment..."
+  if echo "$TFE_TOKEN" | gh secret set TFE_TOKEN --repo "$GITHUB_REPO" 2>/dev/null; then
+    success "TFE_TOKEN secret set"
   else
-    warn "${secret_name} not found (checked repo and org secrets)"
-    MISSING_SECRETS+=("$secret_name")
+    warn "Failed to set TFE_TOKEN — set it manually: gh secret set TFE_TOKEN --repo ${GITHUB_REPO}"
   fi
-done
+fi
 
-if [[ ${#MISSING_SECRETS[@]} -gt 0 ]]; then
-  echo ""
-  printf "  ${C_WHITE}Set missing secrets (repo-level or org-level):${C_RESET}\n"
-  for secret_name in "${MISSING_SECRETS[@]}"; do
-    printf "     ${C_DIM}gh secret set %s --repo %s${C_RESET}\n" "$secret_name" "$GITHUB_REPO"
-  done
+# CLAUDE_CODE_OAUTH_TOKEN — read from ~/.claude/.credentials.json if available
+if echo "$ALL_SECRETS" | grep -q "^CLAUDE_CODE_OAUTH_TOKEN[[:space:]]"; then
+  success "CLAUDE_CODE_OAUTH_TOKEN already set"
+else
+  CLAUDE_CREDS_FILE="${HOME}/.claude/.credentials.json"
+  OAUTH_TOKEN=""
+  if [[ -f "$CLAUDE_CREDS_FILE" ]]; then
+    OAUTH_TOKEN=$(jq -r '.accessToken // empty' "$CLAUDE_CREDS_FILE" 2>/dev/null || echo "")
+  fi
+
+  if [[ -n "$OAUTH_TOKEN" ]]; then
+    info "Setting CLAUDE_CODE_OAUTH_TOKEN from ~/.claude/.credentials.json..."
+    if echo "$OAUTH_TOKEN" | gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo "$GITHUB_REPO" 2>/dev/null; then
+      success "CLAUDE_CODE_OAUTH_TOKEN secret set"
+    else
+      warn "Failed to set CLAUDE_CODE_OAUTH_TOKEN — set it manually"
+    fi
+  else
+    warn "CLAUDE_CODE_OAUTH_TOKEN not found"
+    info "Could not read accessToken from ~/.claude/.credentials.json"
+    printf "     ${C_DIM}Set manually: gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo %s${C_RESET}\n" "$GITHUB_REPO"
+  fi
+fi
+
+# TFE_TOKEN_DEPENDABOT — set from environment variable (Dependabot app context)
+if echo "$ALL_SECRETS" | grep -q "^TFE_TOKEN_DEPENDABOT[[:space:]]"; then
+  success "TFE_TOKEN_DEPENDABOT already set"
+else
+  info "Setting TFE_TOKEN_DEPENDABOT secret from TFE_TOKEN..."
+  if echo "$TFE_TOKEN" | gh secret set TFE_TOKEN_DEPENDABOT --repo "$GITHUB_REPO" --app dependabot 2>/dev/null; then
+    success "TFE_TOKEN_DEPENDABOT secret set (dependabot app)"
+  else
+    # Fallback: try as a regular repo secret
+    if echo "$TFE_TOKEN" | gh secret set TFE_TOKEN_DEPENDABOT --repo "$GITHUB_REPO" 2>/dev/null; then
+      success "TFE_TOKEN_DEPENDABOT secret set (repo-level)"
+    else
+      warn "Failed to set TFE_TOKEN_DEPENDABOT — set it manually: gh secret set TFE_TOKEN_DEPENDABOT --repo ${GITHUB_REPO}"
+    fi
+  fi
+fi
+
+# ─── Set default branch ───────────────────────────────────────────────────
+header "Default Branch"
+
+DEFAULT_BRANCH=$(gh api "repos/${GITHUB_REPO}" --jq '.default_branch' 2>/dev/null || echo "")
+if [[ "$DEFAULT_BRANCH" == "$BASE_BRANCH" ]]; then
+  success "Default branch already set to ${BASE_BRANCH}"
+else
+  info "Setting default branch to ${BASE_BRANCH} (required for claude-code-action)..."
+  if gh repo edit "$GITHUB_REPO" --default-branch "$BASE_BRANCH" 2>/dev/null; then
+    success "Default branch set to ${BASE_BRANCH}"
+  else
+    warn "Failed to set default branch — set it manually:"
+    printf "     ${C_DIM}gh repo edit %s --default-branch %s${C_RESET}\n" "$GITHUB_REPO" "$BASE_BRANCH"
+  fi
 fi
 
 # ─── Print next steps ───────────────────────────────────────────────────────
@@ -336,19 +388,6 @@ header "Setup Complete"
 echo ""
 printf "  ${C_WHITE}Next steps:${C_RESET}\n\n"
 STEP=1
-
-# Check if default branch matches BASE_BRANCH (required for claude-code-action)
-DEFAULT_BRANCH=$(gh api "repos/${GITHUB_REPO}" --jq '.default_branch' 2>/dev/null || echo "")
-if [[ -n "$DEFAULT_BRANCH" && "$DEFAULT_BRANCH" != "$BASE_BRANCH" ]]; then
-  printf "  ${C_CYAN}${STEP}.${C_RESET} ${C_YELLOW}Set default branch${C_RESET} (required for claude-code-action):\n"
-  printf "     ${C_DIM}gh repo edit %s --default-branch %s${C_RESET}\n" "$GITHUB_REPO" "$BASE_BRANCH"
-  STEP=$((STEP + 1))
-fi
-
-if [[ ${#MISSING_SECRETS[@]} -gt 0 ]]; then
-  printf "  ${C_CYAN}${STEP}.${C_RESET} Set the missing secrets listed above\n"
-  STEP=$((STEP + 1))
-fi
 printf "  ${C_CYAN}${STEP}.${C_RESET} Publish a new module version to the PMR:\n"
 printf "     ${C_DIM}bash specs/feat-consumer-uplift/demo/publish-module-version.sh${C_RESET}\n"
 STEP=$((STEP + 1))

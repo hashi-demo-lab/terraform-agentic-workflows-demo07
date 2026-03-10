@@ -76,27 +76,11 @@ This creates:
 
 If `terraform init/plan` fails (e.g. no AWS creds in workspace yet), that's OK — the workflow will handle it. Add `SKIP_PLAN=true` to skip.
 
-### Step 4: Set default branch
+### Step 4: Verify `.mcp.json` in demo repo
 
-The `claude-code-action` requires the workflow file to exist on the **default branch**. Change it:
-
-```bash
-gh repo edit <owner/repo> --default-branch feat/consumer-module-uplift
-```
-
-Once the workflow is merged to `main`, reset to `gh repo edit <owner/repo> --default-branch main`.
-
-### Step 5: Set GitHub secrets
-
-```bash
-gh secret set TFE_TOKEN --repo <owner/repo>
-gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner/repo>
-gh secret set TFE_TOKEN_DEPENDABOT --repo <owner/repo>
-```
-
-**`CLAUDE_CODE_OAUTH_TOKEN`**: Get the value from `~/.claude/.credentials.json` → `accessToken` field. This is used by `claude-code-action` for the `@claude` interactive fix step. It uses your Claude Pro/Team subscription rather than API credits.
-
-### Step 6: Verify `.mcp.json` in demo repo
+> **Note**: `setup.sh` now automatically sets GitHub secrets (`TFE_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `TFE_TOKEN_DEPENDABOT`) and configures the repo default branch. If any fail (e.g. permissions), the script prints manual fallback commands.
+>
+> `CLAUDE_CODE_OAUTH_TOKEN` is read from `~/.claude/.credentials.json` → `accessToken` field. It uses your Claude Pro/Team subscription rather than API credits.
 
 The demo repo's `.mcp.json` must use **npx-based** MCP servers (not Docker) for GitHub Actions compatibility:
 
@@ -114,7 +98,7 @@ The demo repo's `.mcp.json` must use **npx-based** MCP servers (not Docker) for 
 
 `claude-code-action` hardcodes `enableAllProjectMcpServers: true`, so a Docker-based config will crash the action in CI where Docker isn't available.
 
-### Step 7: Publish a new module version to the PMR
+### Step 5: Publish a new module version to the PMR
 
 **Always run this before `trigger-bump.sh`.** The target version must exist in the PMR.
 
@@ -141,7 +125,7 @@ The script:
 7. Polls until TFC ingests the version (timeout: 6 min)
 8. Updates `MODULE_TARGET_VERSION` and `MODULE_CURRENT_VERSION` in local `demo.env`
 
-### Step 8: Trigger the demo
+### Step 6: Trigger the demo
 
 ```bash
 # Uses default scenario from demo.env
@@ -155,7 +139,7 @@ This creates a PR with a `dependabot/terraform/` branch prefix, which triggers t
 
 The version replacement uses a flexible regex that matches any existing constraint format (`"5.8.5"`, `"~> 5.8.5"`, `">= 5.8.5"`, etc.), so it works regardless of what previous runs left on the base branch.
 
-### Step 9: Watch the pipeline
+### Step 7: Watch the pipeline
 
 Open the **Actions** tab in the GitHub repo to watch:
 1. **Classify** — detects semver type from the git diff
@@ -163,7 +147,7 @@ Open the **Actions** tab in the GitHub repo to watch:
 3. **Risk Assessment** — deterministic matrix classifies risk from plan output (if plan shows changes)
 4. **Decision** — labels, comments with risk assessment, and optionally auto-merges
 
-### Step 10: Clean up
+### Step 8: Clean up
 
 ```bash
 bash specs/feat-consumer-uplift/demo/teardown.sh
