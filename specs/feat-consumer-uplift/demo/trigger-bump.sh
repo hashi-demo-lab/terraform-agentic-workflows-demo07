@@ -440,13 +440,13 @@ echo ""
 
 case "$SCENARIO" in
   patch)
-    printf "  ${C_DIM}Expected: Classify → Validate (exit 2) → AI Analysis → Decision (auto-merge or needs-review)${C_RESET}\n"
+    printf "  ${C_DIM}Expected: Classify → Validate (exit 2) → Risk Assessment → Decision (auto-merge or needs-review)${C_RESET}\n"
     ;;
   minor)
-    printf "  ${C_DIM}Expected: Classify → Validate (exit 2) → AI Analysis → Decision (needs-review)${C_RESET}\n"
+    printf "  ${C_DIM}Expected: Classify → Validate (exit 2) → Risk Assessment → Decision (needs-review)${C_RESET}\n"
     ;;
   major)
-    printf "  ${C_DIM}Expected: Classify → Validate (exit 2) → AI Analysis → Decision (needs-review, risk:high)${C_RESET}\n"
+    printf "  ${C_DIM}Expected: Classify → Validate (exit 2) → Risk Assessment → Decision (needs-review, risk:high)${C_RESET}\n"
     printf "  ${C_DIM}Changes: KMS encryption + logging bucket + lifecycle rules + new outputs${C_RESET}\n"
     ;;
   breaking)

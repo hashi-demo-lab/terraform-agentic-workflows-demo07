@@ -1,6 +1,6 @@
 # Consumer Module Uplift — Demo Harness
 
-End-to-end demo of the consumer module uplift pipeline. Creates a TFC workspace, deploys consumer code, publishes a new module version, and triggers Dependabot-style PRs that exercise the AI-powered upgrade pipeline.
+End-to-end demo of the consumer module uplift pipeline. Creates a TFC workspace, deploys consumer code, publishes a new module version, and triggers Dependabot-style PRs that exercise the deterministic upgrade pipeline with `@claude` remediation.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ End-to-end demo of the consumer module uplift pipeline. Creates a TFC workspace,
         ▼
 ┌───────────────────────────────────────────────────────────────────┐
 │  terraform-consumer-uplift.yml                                    │
-│  Classify → Validate → AI Analysis → Decision (merge/review/block)│
+│  Classify → Validate → Risk Assessment → Decision (merge/review/block)│
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,7 +94,7 @@ gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner/repo>
 gh secret set TFE_TOKEN_DEPENDABOT --repo <owner/repo>
 ```
 
-**`CLAUDE_CODE_OAUTH_TOKEN`**: Get the value from `~/.claude/.credentials.json` → `accessToken` field. This is used by `claude-code-action` for the AI Analysis step. It uses your Claude Pro/Team subscription rather than API credits.
+**`CLAUDE_CODE_OAUTH_TOKEN`**: Get the value from `~/.claude/.credentials.json` → `accessToken` field. This is used by `claude-code-action` for the `@claude` interactive fix step. It uses your Claude Pro/Team subscription rather than API credits.
 
 ### Step 6: Verify `.mcp.json` in demo repo
 
@@ -160,8 +160,8 @@ The version replacement uses a flexible regex that matches any existing constrai
 Open the **Actions** tab in the GitHub repo to watch:
 1. **Classify** — detects semver type from the git diff
 2. **Validate** — runs `terraform fmt/init/validate/plan` against TFC workspace
-3. **AI Analysis** — Claude analyzes the upgrade via `claude-code-action` (if plan shows changes)
-4. **Decision** — labels, comments with structured analysis, and optionally auto-merges
+3. **Risk Assessment** — deterministic matrix classifies risk from plan output (if plan shows changes)
+4. **Decision** — labels, comments with risk assessment, and optionally auto-merges
 
 ### Step 10: Clean up
 
@@ -190,7 +190,7 @@ bash specs/feat-consumer-uplift/demo/publish-module-version.sh --bump major
 bash specs/feat-consumer-uplift/demo/trigger-bump.sh --scenario major
 ```
 
-This adds KMS encryption, a dedicated logging bucket, lifecycle rules, and new outputs — producing ~15+ plan changes with security findings that the AI analyst will flag as risk:high.
+This adds KMS encryption, a dedicated logging bucket, lifecycle rules, and new outputs — producing ~15+ plan changes that the deterministic matrix will flag as risk:high.
 
 This works repeatedly — each cycle publishes a new PMR version and creates a fresh PR. No manual `demo.env` editing needed between runs.
 
@@ -198,9 +198,9 @@ This works repeatedly — each cycle publishes a new PMR version and creates a f
 
 | Scenario | What Changes | Pipeline Path | Best For Showing |
 |----------|-------------|---------------|-----------------|
-| `patch` | Version constraint + DemoRun tag | Classify → Validate (exit 2) → AI Analysis → Decision | Auto-merge for low-risk patches |
-| `minor` | Version + logging config + new output | Classify → Validate (exit 2) → AI Analysis → Decision | Full AI analysis with config changes |
-| `major` | KMS encryption + logging bucket + lifecycle rules + 5 outputs | Classify → Validate (exit 2) → AI Analysis → Decision (risk:high) | Security-relevant changes, deep AI analysis, needs-review |
+| `patch` | Version constraint + DemoRun tag | Classify → Validate (exit 2) → Risk Assessment → Decision | Auto-merge for low-risk patches |
+| `minor` | Version + logging config + new output | Classify → Validate (exit 2) → Risk Assessment → Decision | Deterministic risk assessment with config changes |
+| `major` | KMS encryption + logging bucket + lifecycle rules + 5 outputs | Classify → Validate (exit 2) → Risk Assessment → Decision (risk:high) | High change count, needs-review, `@claude` remediation |
 | `breaking` | Version + invalid output reference | Classify → Validate (exit 1) → Breaking label | Breaking change detection and blocking |
 | `no-op` | Constraint format change only | Classify → Validate (exit 0) → PR auto-closed | No-change detection with explanation |
 
@@ -273,10 +273,9 @@ Each presenter gets their own demo repo via `create-demo-repos.zsh`:
 | Classify says "No module version changes" | The version sed replacement didn't match. Verify `main.tf` on base branch — the `replace_version()` function handles any constraint format, but check the diff actually shows a version change |
 | `terraform init` fails with "failed to create backend alias" | Remove `TF_WORKSPACE: ""` from workflow env block — empty string conflicts with cloud backend |
 | Plan exit code always 0 | Must use `PIPESTATUS[0]` when piping terraform through `tee` — `tee` always exits 0 |
-| AI analysis crashes instantly (0 cost, ~200ms) | `.mcp.json` uses Docker-based MCP server. Replace with npx-based config (see Step 6) |
-| "Credit balance is too low" in AI step | Switch from `ANTHROPIC_API_KEY` to `CLAUDE_CODE_OAUTH_TOKEN` (uses Claude subscription) |
-| "JSON parse failure — defaulting to needs-review" | Parse step must read from `$RUNNER_TEMP/claude-execution-output.json`, not PR comments |
-| AI analysis job skipped | Only runs when plan exit code is 2 (changes detected) |
+| @claude fix crashes instantly (0 cost, ~200ms) | `.mcp.json` uses Docker-based MCP server. Replace with npx-based config (see Step 6) |
+| "Credit balance is too low" in @claude step | Switch from `ANTHROPIC_API_KEY` to `CLAUDE_CODE_OAUTH_TOKEN` (uses Claude subscription) |
+| Risk assessment job skipped | Only runs when plan exit code is 2 (changes detected) |
 | Workflow not found by claude-code-action | Default branch must have the workflow file (see Step 4) |
 | Labels not created | Run `setup.sh` again or create manually via `gh label create` |
 | Workspace delete fails | Resources may still exist; destroy via TFC UI first |
