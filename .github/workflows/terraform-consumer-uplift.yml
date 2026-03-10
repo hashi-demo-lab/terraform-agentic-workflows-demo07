@@ -142,8 +142,9 @@ jobs:
 
           echo "exitcode=${PLAN_EXIT}" >> "$GITHUB_OUTPUT"
 
-          # Extract TFC run URL (CLI-driven workspaces print this during remote plan)
-          RUN_URL=$(grep -oP 'https://app\.terraform\.io/\S+' plan_output.txt | head -1 || true)
+          # Extract TFC run URL (CLI-driven workspaces print this during remote plan).
+          # Strip ANSI escape codes (\x1B[0m etc.) that Terraform includes in colored output.
+          RUN_URL=$(grep -oP 'https://app\.terraform\.io/\S+' plan_output.txt | head -1 | sed 's/\x1B\[[0-9;]*m//g' || true)
           echo "run_url=${RUN_URL}" >> "$GITHUB_OUTPUT"
 
           case $PLAN_EXIT in
