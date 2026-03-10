@@ -316,45 +316,40 @@ jobs:
 
           # ── Apply decision matrix ──
           #
-          #                   PATCH           MINOR           MAJOR
-          # Plan OK, <=5     auto-merge/low  auto-merge/low  needs-review/medium
-          # Plan OK, >5      needs-review/med needs-review/med needs-review/high
-          # DESTROY/REPLACE  needs-review/high needs-review/high breaking-change/critical
+          #                       PATCH           MINOR           MAJOR
+          # Plan OK, no changes  auto-merge/low  auto-merge/low  auto-merge/low
+          # Plan OK, changes     needs-review/med needs-review/med needs-review/high
+          # DESTROY/REPLACE      breaking/high   breaking/high   breaking/critical
+          # Plan fails (exit 1)  breaking/high   breaking/high   breaking/critical
           #
           # (Plan exit 1 is handled in validate job; this job only runs on exit 2)
 
           if [[ "$HAS_DESTRUCTIVE" == "true" ]]; then
-            # DESTROY or REPLACE in plan — escalate
+            # DESTROY or REPLACE in plan — always block
             if [[ "$VERSION_TYPE" == "major" ]]; then
               DECISION="breaking-change"
               RISK_LEVEL="critical"
-              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}, replace: ${REPLACE}) on a major version bump — requires manual intervention."
+              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}, replace: ${REPLACE}) on a major version bump — merge blocked."
             else
-              DECISION="needs-review"
+              DECISION="breaking-change"
               RISK_LEVEL="high"
-              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}, replace: ${REPLACE}) — escalated to review regardless of change count."
+              RATIONALE="Plan contains destructive operations (destroy: ${DESTROY}, replace: ${REPLACE}) — merge blocked regardless of semver type."
             fi
-          elif [[ "$TOTAL" -le 5 ]]; then
-            # Plan succeeds, changes <= 5
-            if [[ "$VERSION_TYPE" == "major" ]]; then
-              DECISION="needs-review"
-              RISK_LEVEL="medium"
-              RATIONALE="Major version bump with ${TOTAL} planned change(s) — major versions are never auto-merged."
-            else
-              DECISION="auto-merge"
-              RISK_LEVEL="low"
-              RATIONALE="${VERSION_TYPE^} version bump with ${TOTAL} planned change(s) and no destructive operations — safe to auto-merge."
-            fi
+          elif [[ "$TOTAL" -eq 0 ]]; then
+            # No changes — safe to auto-merge
+            DECISION="auto-merge"
+            RISK_LEVEL="low"
+            RATIONALE="${VERSION_TYPE^} version bump with no planned changes — safe to auto-merge."
           else
-            # Plan succeeds, changes > 5
+            # Plan succeeds with changes — always needs review
             if [[ "$VERSION_TYPE" == "major" ]]; then
               DECISION="needs-review"
               RISK_LEVEL="high"
-              RATIONALE="Major version bump with ${TOTAL} planned change(s) — high change count on a major bump requires careful review."
+              RATIONALE="Major version bump with ${TOTAL} planned change(s) — requires review."
             else
               DECISION="needs-review"
               RISK_LEVEL="medium"
-              RATIONALE="${VERSION_TYPE^} version bump with ${TOTAL} planned change(s) — elevated change count requires review."
+              RATIONALE="${VERSION_TYPE^} version bump with ${TOTAL} planned change(s) — any infrastructure change requires review."
             fi
           fi
 

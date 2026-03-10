@@ -24,7 +24,7 @@
   --serif: 'Playfair Display', Georgia, serif;
   --sans: 'Source Sans 3', -apple-system, sans-serif;
   --mono: 'JetBrains Mono', 'SF Mono', monospace;
-  --max-w: 880px;
+  --max-w: 820px;
   --pink: #C4283A; --cyan: #1A6B7A; --purple: #6B3FA0;
   --green: #2D7A4F; --orange: #B87333; --yellow: #9A7B2D;
   --ice: #4A6B8A; --cmd-red: #A03030;
@@ -33,12 +33,18 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--bg); color: var(--text-body);
   font-family: var(--sans); font-size: 17px; line-height: 1.72;
-  padding: 40px 0 80px;
+  padding: 50px 0 70px;
 }
 
-/* === HEADER === */
+/* === READING PROGRESS BAR === */
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0%;
+  background: var(--red); z-index: 100; transition: width 0.1s linear;
+}
+
+/* === STICKY HEADER === */
 #header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  position: fixed; top: 2px; left: 0; right: 0; z-index: 50;
   height: 48px; background: rgba(250,250,248,0.97);
   border-bottom: 1px solid var(--border-light);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -46,7 +52,7 @@ body {
 }
 #header-title {
   font-family: var(--serif); font-size: 14px; font-weight: 700;
-  color: var(--text); letter-spacing: 0.3px;
+  color: var(--text); letter-spacing: 0.3px; cursor: pointer;
 }
 #header-title span { color: var(--red); }
 #header-nav { display: flex; gap: 4px; margin-left: auto; align-items: center; }
@@ -58,10 +64,85 @@ body {
 }
 .header-link:hover { color: var(--text); background: rgba(0,0,0,0.03); }
 .header-link.active { color: var(--red); }
+#search-btn {
+  width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border);
+  background: white; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 13px; color: var(--text-muted);
+  margin-left: 6px; transition: all 0.2s;
+}
+#search-btn:hover { border-color: var(--red); color: var(--red); }
+#toc-toggle {
+  width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border);
+  background: white; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 14px; color: var(--text-muted);
+  margin-left: 6px; transition: all 0.2s;
+}
+#toc-toggle:hover { border-color: var(--red); color: var(--red); }
 
-/* === LANDING === */
+/* === TOC PANEL === */
+#toc-panel {
+  position: fixed; top: 50px; right: 0; width: 300px; bottom: 0;
+  background: white; border-left: 1px solid var(--border-light);
+  z-index: 40; transform: translateX(100%); transition: transform 0.3s ease;
+  overflow-y: auto; padding: 24px 20px;
+}
+#toc-panel.open { transform: translateX(0); }
+#toc-panel h3 {
+  font-family: var(--serif); font-size: 14px; font-weight: 700;
+  color: var(--text); margin-bottom: 16px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.toc-section { margin-bottom: 16px; }
+.toc-section-title {
+  font-family: var(--sans); font-size: 10px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--red);
+  margin-bottom: 6px;
+}
+.toc-link {
+  display: block; font-size: 13px; color: var(--text-muted); padding: 3px 0 3px 12px;
+  text-decoration: none; border-left: 2px solid transparent; transition: all 0.2s;
+  cursor: pointer;
+}
+.toc-link:hover { color: var(--text); border-left-color: var(--border); }
+.toc-link.active { color: var(--red); border-left-color: var(--red); font-weight: 600; }
+
+/* === SEARCH OVERLAY === */
+#search-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+  display: none; align-items: flex-start; justify-content: center; padding-top: 100px;
+}
+#search-overlay.open { display: flex; }
+#search-box {
+  width: 560px; max-width: 90vw; background: white;
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden;
+}
+#search-input {
+  width: 100%; background: transparent; border: none;
+  border-bottom: 1px solid var(--border-light);
+  padding: 16px 20px; color: var(--text); font-family: var(--mono);
+  font-size: 14px; outline: none;
+}
+#search-input::placeholder { color: var(--text-caption); }
+#search-results { max-height: 360px; overflow-y: auto; padding: 8px; }
+.search-result {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-radius: 6px; cursor: pointer; transition: background 0.15s;
+}
+.search-result:hover, .search-result.selected { background: var(--bg-warm); }
+.search-result .sr-type {
+  font-size: 8px; letter-spacing: 1px; text-transform: uppercase; padding: 2px 6px;
+  border-radius: 3px; border: 1px solid; white-space: nowrap; min-width: 48px;
+  text-align: center; font-family: var(--mono);
+}
+.search-result .sr-name { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.search-result .sr-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.search-empty { padding: 20px; text-align: center; color: var(--text-caption); font-size: 13px; }
+
+/* === HERO / LANDING === */
 #landing {
-  padding: 80px 28px 40px; text-align: center;
+  padding: 80px 28px 60px; text-align: center;
   max-width: var(--max-w); margin: 0 auto;
 }
 .landing-eyebrow {
@@ -69,27 +150,27 @@ body {
   text-transform: uppercase; color: var(--red); margin-bottom: 20px;
 }
 .landing-headline {
-  font-family: var(--serif); font-size: 38px; font-weight: 800;
-  color: var(--text); line-height: 1.15; margin-bottom: 16px;
+  font-family: var(--serif); font-size: 42px; font-weight: 800;
+  color: var(--text); line-height: 1.15; margin-bottom: 20px;
 }
 .landing-body {
-  font-size: 17px; line-height: 1.7; color: var(--text-muted);
-  max-width: 640px; margin: 0 auto 32px; font-weight: 300;
+  font-size: 18px; line-height: 1.7; color: var(--text-muted);
+  max-width: 600px; margin: 0 auto 36px; font-weight: 300;
 }
 
 /* === PILLAR CARDS === */
 .pillar-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
   max-width: var(--max-w); margin: 0 auto 48px; padding: 0 28px;
 }
 .pillar-card {
-  border: 1px solid var(--border); border-radius: 8px; padding: 20px;
+  border: 1px solid var(--border); border-radius: 8px; padding: 24px;
   background: white; transition: all 0.2s;
 }
 .pillar-card:hover { border-color: var(--text-caption); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .pillar-label {
   font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
-  text-transform: uppercase; margin-bottom: 8px;
+  text-transform: uppercase; margin-bottom: 10px;
 }
 .pillar-card p { font-size: 14px; line-height: 1.65; color: var(--text-muted); }
 .pillar-card code {
@@ -97,37 +178,41 @@ body {
   padding: 1px 5px; border-radius: 3px; color: var(--red);
 }
 
-/* === SECTIONS === */
+/* === SECTIONS & CHAPTERS === */
+.chapter {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 28px;
+}
 .chapter-divider {
-  text-align: center; padding: 48px 28px 32px;
+  text-align: center; padding: 80px 28px 48px;
   border-top: 1px solid var(--border);
   max-width: var(--max-w); margin: 0 auto;
-  scroll-margin-top: 60px;
+  scroll-margin-top: 40px;
 }
+.chapter-divider:first-of-type { border-top: none; padding-top: 0; }
 .chapter-number {
   font-family: var(--mono); font-size: 11px; font-weight: 600;
   letter-spacing: 3px; text-transform: uppercase; color: var(--red);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .chapter-title {
-  font-family: var(--serif); font-size: 30px; font-weight: 800;
-  color: var(--text); line-height: 1.2; margin-bottom: 10px;
+  font-family: var(--serif); font-size: 36px; font-weight: 800;
+  color: var(--text); line-height: 1.2; margin-bottom: 12px;
 }
 .chapter-subtitle {
-  font-family: var(--sans); font-size: 15px; color: var(--text-muted);
-  font-weight: 300; max-width: 560px; margin: 0 auto;
+  font-family: var(--sans); font-size: 16px; color: var(--text-muted);
+  font-weight: 300; max-width: 540px; margin: 0 auto;
 }
 
 /* === SUBSECTION === */
 .subsection {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 28px 40px;
+  max-width: var(--max-w); margin: 0 auto; padding: 0 28px 48px;
   scroll-margin-top: 80px;
   opacity: 0; transform: translateY(20px);
   transition: opacity 0.6s ease, transform 0.6s ease;
 }
 .subsection.revealed { opacity: 1; transform: translateY(0); }
 .subsection-title {
-  font-family: var(--serif); font-size: 22px; font-weight: 700;
+  font-family: var(--serif); font-size: 24px; font-weight: 700;
   color: var(--text); margin-bottom: 6px;
 }
 .subsection-desc {
@@ -140,24 +225,65 @@ body {
 .svg-diagram svg { width: 100%; height: auto; display: block; overflow: visible; }
 
 /* === CARDS === */
-.card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 .card-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
 .card-grid.single { grid-template-columns: 1fr; }
 .ed-card {
-  border: 1px solid var(--border); border-radius: 8px; padding: 18px;
+  border: 1px solid var(--border); border-radius: 8px; padding: 20px;
   background: white; transition: border-color 0.2s;
 }
 .ed-card:hover { border-color: var(--text-caption); }
 .ed-card h3 {
-  font-family: var(--serif); font-size: 15px; font-weight: 700;
-  color: var(--text); margin-bottom: 6px;
+  font-family: var(--serif); font-size: 16px; font-weight: 700;
+  color: var(--text); margin-bottom: 8px;
 }
-.ed-card p { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 4px; }
+.ed-card p { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 6px; }
+.ed-card ul { font-size: 12px; color: var(--text-muted); line-height: 1.7; padding-left: 18px; }
+.ed-card .card-detail { font-size: 12px; color: var(--text-caption); line-height: 1.5; font-style: italic; }
 .ed-card code {
   font-family: var(--mono); font-size: 11px; background: var(--bg-code);
   padding: 1px 5px; border-radius: 3px; color: var(--red);
 }
-.ed-card ul { font-size: 12px; color: var(--text-muted); line-height: 1.7; padding-left: 16px; }
+
+/* === EXPANDABLE CARDS (details/summary) === */
+details.ed-card { cursor: pointer; }
+details.ed-card summary {
+  list-style: none; position: relative; outline: none;
+}
+details.ed-card summary::-webkit-details-marker,
+details.ed-card summary::marker { display: none; }
+details.ed-card summary::after {
+  content: '▸'; position: absolute; top: 0; right: 0;
+  font-size: 14px; color: var(--text-caption); transition: transform 0.2s ease;
+}
+details.ed-card[open] summary::after { transform: rotate(90deg); }
+.card-expand {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  font-family: var(--sans); font-size: 13px; line-height: 1.65; color: var(--text-body);
+}
+.card-expand ul { margin: 8px 0 8px 16px; list-style: disc; }
+.card-expand li { margin-bottom: 4px; }
+.card-expand code {
+  font-family: var(--mono); font-size: 11px; background: var(--bg-warm);
+  padding: 1px 5px; border-radius: 3px;
+}
+.card-expand pre {
+  margin: 8px 0; padding: 10px 12px; background: var(--bg-warm);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.5; overflow-x: auto;
+  white-space: pre-wrap;
+}
+.card-expand .card-detail { margin-top: 10px; }
+.card-expand .expand-ref {
+  margin-top: 8px; font-size: 11px; color: var(--text-caption);
+  font-family: var(--mono);
+}
+details.ed-card::details-content {
+  transition: height 0.3s ease, content-visibility 0.3s ease allow-discrete;
+  height: 0; overflow: clip;
+}
+details.ed-card[open]::details-content { height: auto; }
 
 /* === NODES === */
 .node {
@@ -229,7 +355,8 @@ body {
 @media (max-width:900px) {
   .pillar-grid { grid-template-columns: 1fr; }
   .card-grid, .card-grid.triple { grid-template-columns: 1fr; }
-  .landing-headline { font-size: 28px; }
+  .landing-headline { font-size: 32px; }
+  .chapter-title { font-size: 28px; }
   .svg-diagram { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .svg-diagram svg { min-width: 700px; }
 }
@@ -237,21 +364,40 @@ body {
 </head>
 <body>
 
+<!-- PROGRESS BAR -->
+<div id="progress-bar"></div>
+
 <!-- HEADER -->
 <div id="header">
-  <div id="header-title"><span>Consumer Module</span> Uplift</div>
+  <div id="header-title" onclick="scrollTo({top:0,behavior:'smooth'})"><span>Consumer Module</span> Uplift</div>
   <div id="header-nav">
-    <a class="header-link active" href="#landing">Overview</a>
-    <a class="header-link" href="#pipeline-section">Pipeline</a>
-    <a class="header-link" href="#escalation-section">Escalation</a>
-    <a class="header-link" href="#decision-section">Decision</a>
-    <a class="header-link" href="#apply-section">Apply</a>
-    <a class="header-link" href="#artifacts-section">Artifacts</a>
+    <button class="header-link active" onclick="scrollToSection('landing')">Overview</button>
+    <button class="header-link" onclick="scrollToSection('pipeline-section')">Pipeline</button>
+    <button class="header-link" onclick="scrollToSection('escalation-section')">Escalation</button>
+    <button class="header-link" onclick="scrollToSection('decision-section')">Decision</button>
+    <button class="header-link" onclick="scrollToSection('apply-section')">Apply</button>
+    <button class="header-link" onclick="scrollToSection('artifacts-section')">Artifacts</button>
+    <button id="search-btn" onclick="openSearch()" title="Search (/)">&#x2315;</button>
+    <button id="toc-toggle" onclick="toggleTOC()" title="Table of Contents">&#x2630;</button>
+  </div>
+</div>
+
+<!-- TOC PANEL -->
+<div id="toc-panel">
+  <h3>Table of Contents</h3>
+  <div id="toc-content"></div>
+</div>
+
+<!-- SEARCH OVERLAY -->
+<div id="search-overlay">
+  <div id="search-box">
+    <input id="search-input" type="text" placeholder="Search sections, components, concepts..." autocomplete="off">
+    <div id="search-results"></div>
   </div>
 </div>
 
 <!-- ===== LANDING ===== -->
-<section id="landing">
+<section id="landing" data-section="landing">
   <div class="landing-eyebrow">USE CASE 1 -- CONSUMER MODULE UPLIFT</div>
   <h1 class="landing-headline">Automated Module Version Upgrades for HCP Terraform Consumers</h1>
   <p class="landing-body">A connected GitHub Actions pipeline that detects module version bumps, validates with Terraform, applies a deterministic risk matrix, and auto-merges safe changes -- with <code>@claude</code> interactive escalation for complex upgrades.</p>
@@ -265,22 +411,22 @@ body {
   </div>
   <div class="pillar-card">
     <div class="pillar-label" style="color:var(--purple)">ASSESS</div>
-    <p>A deterministic risk matrix classifies changes by semver type, plan resource count, and destroy/replace presence. No AI needed -- purely scripted.</p>
+    <p>A deterministic risk matrix classifies changes by semver type, plan exit code, and destroy/replace presence. No AI needed -- purely scripted.</p>
   </div>
   <div class="pillar-card">
     <div class="pillar-label" style="color:var(--green)">DECIDE</div>
-    <p>Structured JSON output drives deterministic decisions: auto-merge low-risk patches, request review for medium, block breaking changes. <code>@claude</code> for follow-up.</p>
+    <p>Structured JSON output drives deterministic decisions: auto-merge zero-change plans, request review for any changes, block breaking changes. <code>@claude</code> for follow-up.</p>
   </div>
 </div>
 
 <!-- ===== CONNECTED PIPELINE ===== -->
-<div class="chapter-divider" id="pipeline-section">
+<div class="chapter-divider" id="pipeline-section" data-section="pipeline-section">
   <div class="chapter-number">Connected Pipeline</div>
   <h2 class="chapter-title">Single Workflow, Two Entry Points</h2>
   <p class="chapter-subtitle">One <code>.yml</code> file handles both automated PR analysis and interactive <code>@claude</code> follow-up -- separate trigger paths, shared infrastructure</p>
 </div>
 
-<div class="subsection revealed" id="pipeline-diagram">
+<div class="subsection" id="pipeline-diagram" data-sub="Pipeline Diagram">
   <div class="svg-diagram" style="max-width:820px">
     <svg id="pipeline-svg" viewBox="0 0 820 530" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -409,27 +555,27 @@ body {
 
       <!-- === ANIMATED FLOW: glowing dots between jobs === -->
 
-      <!-- Dot: Job 1 → Job 2 -->
+      <!-- Dot: Job 1 to Job 2 -->
       <circle r="5" fill="#1A6B7A" filter="url(#glow-teal)" opacity="0">
         <animateMotion dur="5s" repeatCount="indefinite" path="M117,220 L117,230 L344,230 L344,220" keyPoints="0;0.15;0.85;1" keyTimes="0;0.15;0.85;1" calcMode="linear"/>
         <animate attributeName="opacity" values="0;0.95;0.95;0" dur="5s" repeatCount="indefinite" keyTimes="0;0.08;0.92;1"/>
         <animate attributeName="fill" values="#1A6B7A;#1A6B7A;#B87333;#B87333" dur="5s" repeatCount="indefinite" keyTimes="0;0.4;0.6;1"/>
         <animate attributeName="r" values="5;4;4;5" dur="5s" repeatCount="indefinite" keyTimes="0;0.3;0.7;1"/>
       </circle>
-      <!-- Trail for Job1→2 -->
+      <!-- Trail for Job1 to Job2 -->
       <circle r="3" fill="#1A6B7A" opacity="0">
         <animateMotion dur="5s" repeatCount="indefinite" path="M117,220 L117,230 L344,230 L344,220" keyPoints="0;0.15;0.85;1" keyTimes="0;0.15;0.85;1" calcMode="linear" begin="0.15s"/>
         <animate attributeName="opacity" values="0;0.3;0.3;0" dur="5s" repeatCount="indefinite" begin="0.15s" keyTimes="0;0.08;0.92;1"/>
       </circle>
 
-      <!-- Dot: Job 2 → Job 3 -->
+      <!-- Dot: Job 2 to Job 3 -->
       <circle r="5" fill="#B87333" filter="url(#glow-orange)" opacity="0">
         <animateMotion dur="5s" repeatCount="indefinite" begin="1.6s" path="M344,220 L344,230 L636,230 L636,220" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
         <animate attributeName="opacity" values="0;0.95;0.95;0" dur="5s" repeatCount="indefinite" begin="1.6s" keyTimes="0;0.08;0.92;1"/>
         <animate attributeName="fill" values="#B87333;#B87333;#6B3FA0;#6B3FA0" dur="5s" repeatCount="indefinite" begin="1.6s" keyTimes="0;0.4;0.6;1"/>
         <animate attributeName="r" values="5;4;4;5" dur="5s" repeatCount="indefinite" begin="1.6s" keyTimes="0;0.3;0.7;1"/>
       </circle>
-      <!-- Trail for Job2→3 -->
+      <!-- Trail for Job2 to Job3 -->
       <circle r="3" fill="#B87333" opacity="0">
         <animateMotion dur="5s" repeatCount="indefinite" begin="1.75s" path="M344,220 L344,230 L636,230 L636,220" keyPoints="0;0.1;0.9;1" keyTimes="0;0.1;0.9;1" calcMode="linear"/>
         <animate attributeName="opacity" values="0;0.25;0.25;0" dur="5s" repeatCount="indefinite" begin="1.75s" keyTimes="0;0.08;0.92;1"/>
@@ -485,9 +631,9 @@ body {
         <text x="300" y="275" font-size="12" fill="#8A8A8A">&#8594;</text>
         <rect x="310" y="261" width="90" height="20" rx="4" fill="#B87333" opacity="0.1"/>
         <text x="355" y="275" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#B87333" font-weight="700">plan -detailed</text>
-        <text x="36" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">exit 0: comment + close PR</text>
-        <text x="220" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A">exit 1: label breaking</text>
-        <text x="410" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F">exit 2: continue to Job 3</text>
+        <text x="36" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#8A8A8A">exit 0: no changes (safe)</text>
+        <text x="220" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#C4283A">exit 1: plan failed</text>
+        <text x="410" y="299" font-family="JetBrains Mono,monospace" font-size="9" fill="#2D7A4F">exit 2: changes detected &#8594; Job 3</text>
         <g style="cursor:pointer" onclick="toggleJobDetail(2)"><text x="782" y="251" text-anchor="middle" font-family="Source Sans 3,sans-serif" font-size="14" fill="#8A8A8A">&#10005;</text></g>
       </g>
 
@@ -530,7 +676,7 @@ body {
         <!-- Faint path: Job 3 to Job 4 -->
         <line x1="636" y1="220" x2="410" y2="265" stroke="#6B3FA0" stroke-width="1" opacity="0.08"/>
 
-        <!-- Glowing dot: Job 3 → Job 4 -->
+        <!-- Glowing dot: Job 3 to Job 4 -->
         <circle r="5" fill="#6B3FA0" filter="url(#glow-purple)" opacity="0">
           <animateMotion dur="5s" repeatCount="indefinite" begin="3.2s" path="M636,220 L410,265"/>
           <animate attributeName="opacity" values="0;0.95;0.95;0" dur="5s" repeatCount="indefinite" begin="3.2s" keyTimes="0;0.1;0.8;1"/>
@@ -640,163 +786,258 @@ body {
 </div>
 
 <!-- ===== ESCALATION FLOW ===== -->
-<div class="chapter-divider" id="escalation-section">
+<div class="chapter-divider" id="escalation-section" data-section="escalation-section">
   <div class="chapter-number">Escalation</div>
   <h2 class="chapter-title">The @claude Fix Loop</h2>
-  <p class="chapter-subtitle">When the pipeline labels a PR as needs-review or breaking-change, comment <code>@claude</code> to have it fix the consumer code and push — the pipeline then re-runs automatically</p>
+  <p class="chapter-subtitle">When the pipeline labels a PR as needs-review or breaking-change, comment <code>@claude</code> to have it fix the consumer code and push -- the pipeline then re-runs automatically</p>
 </div>
 
-<div class="subsection revealed">
+<div class="subsection" id="escalation-risk-levels" data-sub="Risk Levels">
   <div class="card-grid">
-    <div class="ed-card" style="border-top: 3px solid var(--green)">
-      <h3>Low Risk: Auto-Merge</h3>
-      <p>Patch or minor bump, no breaking changes, small plan diff. Pipeline auto-merges with squash. No human intervention needed.</p>
-      <div class="node-row" style="margin-top:8px">
-        <span class="node node-script">risk:low</span>
-        <span class="node node-script">auto-merge</span>
+    <details class="ed-card" style="border-top: 3px solid var(--green)">
+      <summary>
+        <h3>Low Risk: Auto-Merge</h3>
+        <p>No plan changes detected. Plan exits with code 0 (no changes). Pipeline auto-merges with squash. No human intervention needed.</p>
+        <div class="node-row" style="margin-top:8px">
+          <span class="node node-script">risk:low</span>
+          <span class="node node-script">auto-merge</span>
+        </div>
+      </summary>
+      <div class="card-expand">
+        <p>This is the only auto-merge path. The module version bump was applied but resulted in zero infrastructure changes -- the plan is clean. This applies equally to patch, minor, and major bumps.</p>
+        <ul>
+          <li>Plan exit code: <code>0</code> (success, no changes)</li>
+          <li>Action: squash merge + <code>risk:low</code> label</li>
+          <li>No reviewer requested</li>
+        </ul>
       </div>
-    </div>
-    <div class="ed-card" style="border-top: 3px solid var(--yellow)">
-      <h3>Medium Risk: @claude Available</h3>
-      <p>Plan changes &gt; 5 or major version bump. Labels applied, reviewer requested. Comment <code>@claude</code> to investigate and reduce blast radius if possible.</p>
-      <div class="node-row" style="margin-top:8px">
-        <span class="node node-mcp">risk:medium</span>
-        <span class="node node-template">needs-review</span>
+    </details>
+    <details class="ed-card" style="border-top: 3px solid var(--yellow)">
+      <summary>
+        <h3>Medium Risk: @claude Available</h3>
+        <p>Plan has changes. Any plan with resource additions, modifications, or updates requires human review. Comment <code>@claude</code> to investigate and reduce blast radius if possible.</p>
+        <div class="node-row" style="margin-top:8px">
+          <span class="node node-mcp">risk:medium</span>
+          <span class="node node-template">needs-review</span>
+        </div>
+      </summary>
+      <div class="card-expand">
+        <p>Any plan that succeeds with changes (exit code 2) but has no DESTROY/REPLACE actions lands here. The number of changes is irrelevant -- even a single resource change requires human review.</p>
+        <ul>
+          <li>Plan exit code: <code>2</code> (changes detected, no destroy/replace)</li>
+          <li>Action: <code>needs-review</code> label + request reviewer</li>
+          <li>Optional: comment <code>@claude</code> to investigate</li>
+        </ul>
       </div>
-    </div>
-    <div class="ed-card" style="border-top: 3px solid var(--orange)">
-      <h3>High Risk: @claude Recommended</h3>
-      <p>DESTROY/REPLACE in plan or major bump with large diff. Comment <code>@claude</code> to fix consumer code — it adapts config, validates, and pushes to the PR branch.</p>
-      <div class="node-row" style="margin-top:8px">
-        <span class="node node-artifact">risk:high</span>
-        <span class="node node-agent">@claude fix</span>
+    </details>
+    <details class="ed-card" style="border-top: 3px solid var(--orange)">
+      <summary>
+        <h3>High Risk: @claude Recommended</h3>
+        <p>DESTROY/REPLACE in plan. Any resource destruction or replacement always results in breaking-change classification. Comment <code>@claude</code> to fix consumer code.</p>
+        <div class="node-row" style="margin-top:8px">
+          <span class="node node-artifact">risk:high</span>
+          <span class="node node-agent">@claude fix</span>
+        </div>
+      </summary>
+      <div class="card-expand">
+        <p>DESTROY/REPLACE actions are always treated as breaking changes, regardless of semver type. For patch and minor bumps this is <code>risk:high</code>; for major bumps it escalates to <code>risk:critical</code>.</p>
+        <ul>
+          <li>Plan contains <code>destroy</code> or <code>replace</code> actions</li>
+          <li>Action: <code>breaking-change</code> label + merge blocked</li>
+          <li>Recommended: comment <code>@claude</code> to adapt config</li>
+        </ul>
       </div>
-    </div>
-    <div class="ed-card" style="border-top: 3px solid var(--red)">
-      <h3>Critical: Blocked</h3>
-      <p>Plan failed (exit 1) on a major bump. Merge blocked. Comment <code>@claude</code> to diagnose the error, fix consumer code, and push — pipeline re-validates after the fix.</p>
-      <div class="node-row" style="margin-top:8px">
-        <span class="node node-cmd">risk:critical</span>
-        <span class="node node-cmd">breaking-change</span>
+    </details>
+    <details class="ed-card" style="border-top: 3px solid var(--red)">
+      <summary>
+        <h3>Critical: Blocked</h3>
+        <p>Plan failed (exit 1). The module version bump introduces changes that prevent Terraform from planning. Merge blocked. Comment <code>@claude</code> to diagnose and fix.</p>
+        <div class="node-row" style="margin-top:8px">
+          <span class="node node-cmd">risk:critical</span>
+          <span class="node node-cmd">breaking-change</span>
+        </div>
+      </summary>
+      <div class="card-expand">
+        <p>Plan failure means the module interface changed in a way that breaks the consumer code. For patch and minor bumps this is <code>risk:high</code>; for major bumps it escalates to <code>risk:critical</code>.</p>
+        <ul>
+          <li>Plan exit code: <code>1</code> (error)</li>
+          <li>Action: <code>breaking-change</code> label + merge blocked</li>
+          <li>Comment <code>@claude</code> to diagnose, fix, and push</li>
+          <li>Pipeline re-validates automatically after fix</li>
+        </ul>
       </div>
-    </div>
+    </details>
   </div>
 
   <div class="subsection-title" style="margin-top:16px">How @claude Interactive Works</div>
   <div class="subsection-desc">The same workflow file handles both automated and interactive triggers</div>
 
-  <div class="card-grid single">
-    <div class="ed-card">
+  <details class="ed-card">
+    <summary>
       <h3>Single Workflow, Two Entry Points</h3>
-      <p>The <code>terraform-consumer-uplift.yml</code> workflow has two trigger sections. Jobs 1-4 run on <code>pull_request</code> events (automated, deterministic). The interactive job runs on <code>issue_comment</code> when <code>@claude</code> is mentioned. Claude checks out the PR branch, runs <code>terraform plan</code> to capture the current state, then uses MCP tools to investigate module interface changes and fix consumer code.</p>
-      <p style="margin-top:8px">When <code>@claude</code> pushes code fixes to the PR branch, it re-triggers Jobs 1-4 automatically (via <code>synchronize</code> event). This creates a fix loop: human comments <code>@claude</code> &rarr; Claude fixes code &rarr; pushes &rarr; pipeline re-validates &rarr; risk re-assessed. Claude never approves or merges -- the pipeline handles that.</p>
+      <p>The <code>terraform-consumer-uplift.yml</code> workflow has two trigger sections. Jobs 1-4 run on <code>pull_request</code> events (automated, deterministic). The interactive job runs on <code>issue_comment</code> when <code>@claude</code> is mentioned.</p>
+    </summary>
+    <div class="card-expand">
+      <p>Claude checks out the PR branch, runs <code>terraform plan</code> to capture the current state, then uses MCP tools to investigate module interface changes and fix consumer code.</p>
+      <p>When <code>@claude</code> pushes code fixes to the PR branch, it re-triggers Jobs 1-4 automatically (via <code>synchronize</code> event). This creates a fix loop:</p>
+      <ul>
+        <li>Human comments <code>@claude</code></li>
+        <li>Claude fixes code + pushes</li>
+        <li>Pipeline re-validates</li>
+        <li>Risk re-assessed</li>
+      </ul>
+      <p class="card-detail">Claude never approves or merges -- the pipeline handles that.</p>
     </div>
-  </div>
+  </details>
 </div>
 
 <!-- ===== DECISION MATRIX ===== -->
-<div class="chapter-divider" id="decision-section">
+<div class="chapter-divider" id="decision-section" data-section="decision-section">
   <div class="chapter-number">Risk Assessment</div>
   <h2 class="chapter-title">Decision Matrix</h2>
-  <p class="chapter-subtitle">Deterministic risk classification from plan exit code, resource counts, and semver type</p>
+  <p class="chapter-subtitle">Deterministic risk classification from plan exit code, destroy/replace presence, and semver type</p>
 </div>
 
-<div class="subsection revealed">
+<div class="subsection" id="decision-matrix" data-sub="Decision Matrix">
   <table class="matrix-table">
     <tr>
-      <th></th>
+      <th>Condition</th>
       <th>Patch</th>
       <th>Minor</th>
       <th>Major</th>
     </tr>
     <tr>
-      <td><span title="Plan exit code 2 (changes detected), total resource changes <= 5, no destroy/replace actions. Safe for automatic merging on patch/minor.">Plan succeeds, changes &lt;= 5</span></td>
+      <td><span title="Plan succeeds with no changes (exit 0). The module version was updated but no infrastructure changes are needed. This is the only auto-merge path.">Plan succeeds, no changes (exit 0)</span></td>
       <td class="risk-low">AUTO-MERGE<br/>risk:low</td>
       <td class="risk-low">AUTO-MERGE<br/>risk:low</td>
-      <td class="risk-med">NEEDS-REVIEW<br/>risk:medium</td>
+      <td class="risk-low">AUTO-MERGE<br/>risk:low</td>
     </tr>
     <tr>
-      <td><span title="Plan exit code 2 (changes detected), total resource changes > 5. Large blast radius warrants human review.">Plan succeeds, changes &gt; 5</span></td>
+      <td><span title="Plan succeeds with changes (exit 2). Any resource additions, modifications, or updates detected. Number of changes is irrelevant -- all require review.">Plan succeeds with changes</span></td>
       <td class="risk-med">NEEDS-REVIEW<br/>risk:medium</td>
       <td class="risk-med">NEEDS-REVIEW<br/>risk:medium</td>
       <td class="risk-high">NEEDS-REVIEW<br/>risk:high</td>
     </tr>
     <tr>
-      <td><span title="Plan exit code 1 (error). The module version bump introduces changes that prevent Terraform from planning. Comment @claude to diagnose and fix, or intervene manually.">Plan fails (exit 1)</span></td>
+      <td><span title="Plan contains destroy or replace actions. Resource deletion/replacement is irreversible and always classified as breaking-change regardless of semver type.">Any DESTROY/REPLACE in plan</span></td>
       <td class="risk-high">BREAKING-CHANGE<br/>risk:high</td>
       <td class="risk-high">BREAKING-CHANGE<br/>risk:high</td>
       <td class="risk-crit">BREAKING-CHANGE<br/>risk:critical</td>
     </tr>
     <tr>
-      <td><span title="Plan exit code 2 but contains destroy or replace actions. Resource deletion/replacement is irreversible and requires human review regardless of semver type.">Any DESTROY/REPLACE in plan</span></td>
-      <td class="risk-high">NEEDS-REVIEW<br/>risk:high</td>
-      <td class="risk-high">NEEDS-REVIEW<br/>risk:high</td>
+      <td><span title="Plan failed (exit 1). The module version bump introduces changes that prevent Terraform from planning. Comment @claude to diagnose and fix.">Plan fails (exit 1)</span></td>
+      <td class="risk-high">BREAKING-CHANGE<br/>risk:high</td>
+      <td class="risk-high">BREAKING-CHANGE<br/>risk:high</td>
       <td class="risk-crit">BREAKING-CHANGE<br/>risk:critical</td>
     </tr>
   </table>
 
   <div class="card-grid">
-    <div class="ed-card">
-      <h3>Never Auto-Merge Majors</h3>
-      <p>Major version bumps always require human review, even with zero breaking changes detected.</p>
-    </div>
-    <div class="ed-card">
-      <h3>DESTROY/REPLACE Escalates</h3>
-      <p>Any resource destruction or replacement in the plan escalates to at minimum NEEDS-REVIEW with risk:high.</p>
-    </div>
-    <div class="ed-card">
-      <h3>Conservative Bias</h3>
-      <p>When uncertain, the system recommends <code>needs-review</code> over <code>auto-merge</code>.</p>
-    </div>
-    <div class="ed-card">
-      <h3>Fully Deterministic</h3>
-      <p>No AI involved in the risk assessment. The matrix is applied purely from plan exit code, resource counts, and semver type. AI is reserved for <code>@claude</code> interactive follow-up.</p>
-    </div>
+    <details class="ed-card">
+      <summary>
+        <h3>Only Auto-Merge Zero-Change Plans</h3>
+        <p>The only path to auto-merge is a clean plan with zero changes. Even a single resource addition requires human review.</p>
+      </summary>
+      <div class="card-expand">
+        <p>This applies equally to patch, minor, and major bumps. If the module version was updated but no infrastructure changes are needed (exit 0), it is safe to merge automatically. This is the most conservative approach -- any change at all requires human eyes.</p>
+      </div>
+    </details>
+    <details class="ed-card">
+      <summary>
+        <h3>DESTROY/REPLACE Always Blocks</h3>
+        <p>Any resource destruction or replacement in the plan always results in a <code>breaking-change</code> classification and merge block.</p>
+      </summary>
+      <div class="card-expand">
+        <p>Resource deletion and replacement are irreversible operations. Unlike the previous matrix, DESTROY/REPLACE is never classified as merely "needs-review" -- it always blocks the merge as a breaking change. For major bumps, it escalates to <code>risk:critical</code>.</p>
+      </div>
+    </details>
+    <details class="ed-card">
+      <summary>
+        <h3>Conservative Bias</h3>
+        <p>When uncertain, the system recommends <code>needs-review</code> over <code>auto-merge</code>.</p>
+      </summary>
+      <div class="card-expand">
+        <p>The matrix is deliberately skewed toward caution. The resource change count is not considered -- any change requires review. This prevents edge cases where a "small" change (e.g., modifying an IAM policy) could have outsized impact.</p>
+      </div>
+    </details>
+    <details class="ed-card">
+      <summary>
+        <h3>Fully Deterministic</h3>
+        <p>No AI involved in the risk assessment. The matrix is applied purely from plan exit code, destroy/replace presence, and semver type.</p>
+      </summary>
+      <div class="card-expand">
+        <p>AI is reserved for <code>@claude</code> interactive follow-up only. The risk assessment uses a simple lookup table with four conditions checked in priority order. This ensures consistent, auditable decisions across all module upgrades.</p>
+      </div>
+    </details>
   </div>
 </div>
 
 <!-- ===== POST-MERGE APPLY ===== -->
-<div class="chapter-divider" id="apply-section">
+<div class="chapter-divider" id="apply-section" data-section="apply-section">
   <div class="chapter-number">Post-Merge</div>
   <h2 class="chapter-title">Apply & Rollback</h2>
   <p class="chapter-subtitle">Separate workflow triggers on merge to main. Includes structured rollback on failure.</p>
 </div>
 
-<div class="subsection revealed">
+<div class="subsection" id="apply-paths" data-sub="Apply Paths">
   <div class="card-grid">
-    <div class="ed-card" style="border-top: 3px solid var(--green)">
-      <h3>Success Path</h3>
-      <p>Upload config tarball &rarr; <code>POST /api/v2/runs</code> &rarr; poll until applied &rarr; confirm run &rarr; comment results on merged PR.</p>
-      <div class="node-row" style="margin-top:8px">
-        <span class="node node-script">applied</span>
-        <span class="node node-ref">PR comment</span>
+    <details class="ed-card" style="border-top: 3px solid var(--green)">
+      <summary>
+        <h3>Success Path</h3>
+        <p>Upload config tarball, create run via API, poll until applied, confirm run, comment results on merged PR.</p>
+        <div class="node-row" style="margin-top:8px">
+          <span class="node node-script">applied</span>
+          <span class="node node-ref">PR comment</span>
+        </div>
+      </summary>
+      <div class="card-expand">
+        <ul>
+          <li>Upload configuration via <code>POST /api/v2/configuration-versions</code></li>
+          <li>Create run via <code>POST /api/v2/runs</code></li>
+          <li>Poll run status until <code>applied</code> or <code>errored</code></li>
+          <li>Comment run URL + summary on the merged PR</li>
+        </ul>
       </div>
-    </div>
-    <div class="ed-card" style="border-top: 3px solid var(--red)">
-      <h3>Failure Path (D6)</h3>
-      <p>Comment error details on PR &rarr; create <code>incident:apply-failure</code> issue &rarr; auto-generate draft rollback PR (<code>git revert</code>) &rarr; tag CODEOWNERS.</p>
-      <div class="node-row" style="margin-top:8px">
-        <span class="node node-cmd">incident issue</span>
-        <span class="node node-agent">rollback PR</span>
+    </details>
+    <details class="ed-card" style="border-top: 3px solid var(--red)">
+      <summary>
+        <h3>Failure Path (D6)</h3>
+        <p>Comment error details on PR, create incident issue, auto-generate draft rollback PR, tag CODEOWNERS.</p>
+        <div class="node-row" style="margin-top:8px">
+          <span class="node node-cmd">incident issue</span>
+          <span class="node node-agent">rollback PR</span>
+        </div>
+      </summary>
+      <div class="card-expand">
+        <ul>
+          <li>Comment error details on the merged PR</li>
+          <li>Create <code>incident:apply-failure</code> issue with run details</li>
+          <li>Auto-generate draft rollback PR via <code>git revert</code></li>
+          <li>Tag CODEOWNERS for immediate attention</li>
+        </ul>
+        <p class="card-detail">The rollback PR is a draft -- it is not auto-merged.</p>
       </div>
-    </div>
+    </details>
   </div>
-  <div class="card-grid single">
-    <div class="ed-card">
+  <details class="ed-card">
+    <summary>
       <h3>Why No Auto-Revert</h3>
-      <p>Auto-reverting merges at enterprise scale is dangerous -- it can cascade through dependent workspaces, trigger unexpected destroys, and bypass change management. The rollback PR goes through the normal pipeline (classify &rarr; validate &rarr; plan) to ensure the revert is safe before merging. Human control is preserved throughout.</p>
+      <p>Auto-reverting merges at enterprise scale is dangerous -- it can cascade through dependent workspaces, trigger unexpected destroys, and bypass change management.</p>
+    </summary>
+    <div class="card-expand">
+      <p>The rollback PR goes through the normal pipeline (classify, validate, plan) to ensure the revert is safe before merging. Human control is preserved throughout. This is a deliberate design choice to prevent cascading failures in complex workspace dependency graphs.</p>
     </div>
-  </div>
+  </details>
 </div>
 
 <!-- ===== ARTIFACTS ===== -->
-<div class="chapter-divider" id="artifacts-section">
+<div class="chapter-divider" id="artifacts-section" data-section="artifacts-section">
   <div class="chapter-number">Implementation</div>
   <h2 class="chapter-title">Artifacts</h2>
   <p class="chapter-subtitle">Everything needed to implement the consumer uplift pipeline</p>
 </div>
 
-<div class="subsection revealed">
+<div class="subsection" id="artifacts-table" data-sub="File Inventory">
   <table class="artifact-table">
     <tr>
       <th>File</th>
@@ -819,7 +1060,7 @@ body {
       <td>Phase D: Self-updating dashboard issue for pending upgrades</td>
     </tr>
     <tr>
-      <td>.github/agents/module-upgrade-remediation.md</td>
+      <td>.claude/agents/module-upgrade-remediation.md</td>
       <td><span class="node node-agent">agent</span></td>
       <td>@claude remediation playbook for module upgrades</td>
     </tr>
@@ -844,8 +1085,10 @@ body {
       <td>Terraform MCP server for CI (npx, no Docker)</td>
     </tr>
   </table>
+</div>
 
-  <div class="subsection-title" style="margin-top:24px">Implementation Phases</div>
+<div class="subsection" id="artifacts-phases" data-sub="Implementation Phases">
+  <div class="subsection-title">Implementation Phases</div>
 
   <div class="card-grid triple">
     <div class="ed-card" style="border-top: 3px solid var(--cyan)">
@@ -885,28 +1128,30 @@ body {
 </div>
 
 <!-- Footer -->
-<div style="text-align:center; padding: 40px 28px 0; max-width:var(--max-w); margin:0 auto; border-top: 1px solid var(--border)">
-  <p style="font-family:var(--mono); font-size:10px; letter-spacing:1.5px; color:var(--text-caption); text-transform:uppercase">Consumer Module Uplift -- Use Case 1 of Issue #3</p>
-  <p style="font-size:13px; color:var(--text-caption); margin-top:4px">Part of the <span style="color:var(--red); font-weight:600">HCP Terraform x AI Agents</span> SDD framework</p>
+<div style="text-align:center;padding:60px 28px 40px;border-top:1px solid var(--border);max-width:var(--max-w);margin:40px auto 0">
+  <p style="font-family:var(--serif);font-size:14px;color:var(--text-caption)">Consumer Module Uplift -- Use Case 1 of Issue #3</p>
+  <p style="font-size:11px;color:var(--text-caption);margin-top:4px">Part of the <span style="color:var(--red);font-weight:600">HCP Terraform x AI Agents</span> SDD framework</p>
 </div>
 
 <script>
-// Toggle job detail panels - pushes content below down
-const detailHeights = { 1: 75, 2: 100, 3: 165 };
+// ============================================================
+// TOGGLE JOB DETAIL PANELS - pushes content below down
+// ============================================================
+var detailHeights = { 1: 75, 2: 100, 3: 165 };
 function toggleJobDetail(n) {
-  const svg = document.getElementById('pipeline-svg');
-  const belowGroup = document.getElementById('below-jobs');
-  const bgFill = document.getElementById('bg-fill');
-  const bgGrid = document.getElementById('bg-grid');
-  const bgBorder = document.getElementById('bg-border');
-  const baseHeight = 530;
-  let openHeight = 0;
+  var svg = document.getElementById('pipeline-svg');
+  var belowGroup = document.getElementById('below-jobs');
+  var bgFill = document.getElementById('bg-fill');
+  var bgGrid = document.getElementById('bg-grid');
+  var bgBorder = document.getElementById('bg-border');
+  var baseHeight = 530;
+  var openHeight = 0;
 
-  for (let i = 1; i <= 3; i++) {
-    const el = document.getElementById('job' + i + '-detail');
+  for (var i = 1; i <= 3; i++) {
+    var el = document.getElementById('job' + i + '-detail');
     if (!el) continue;
     if (i === n) {
-      const wasHidden = el.getAttribute('visibility') === 'hidden';
+      var wasHidden = el.getAttribute('visibility') === 'hidden';
       el.setAttribute('visibility', wasHidden ? 'visible' : 'hidden');
       if (wasHidden) openHeight = detailHeights[i];
     } else {
@@ -914,31 +1159,189 @@ function toggleJobDetail(n) {
     }
   }
 
-  const newHeight = baseHeight + openHeight;
+  var newHeight = baseHeight + openHeight;
   svg.setAttribute('viewBox', '0 0 820 ' + newHeight);
-  [bgFill, bgGrid, bgBorder].forEach(r => r.setAttribute('height', newHeight));
+  [bgFill, bgGrid, bgBorder].forEach(function(r) { r.setAttribute('height', newHeight); });
   belowGroup.style.transform = openHeight ? 'translate(0,' + openHeight + 'px)' : '';
 }
 
-// Reveal on scroll
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
-}, { threshold: 0.1 });
-document.querySelectorAll('.subsection').forEach(el => observer.observe(el));
+// ============================================================
+// READING PROGRESS BAR
+// ============================================================
+function updateProgress() {
+  var h = document.documentElement.scrollHeight - window.innerHeight;
+  var pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+window.addEventListener('scroll', updateProgress);
 
-// Active header link tracking
-const sections = ['landing', 'pipeline-section', 'escalation-section', 'decision-section', 'apply-section', 'artifacts-section'];
-window.addEventListener('scroll', () => {
-  const links = document.querySelectorAll('.header-link');
-  let current = sections[0];
-  for (const id of sections) {
-    const el = document.getElementById(id);
-    if (el && el.getBoundingClientRect().top <= 100) current = id;
-  }
-  links.forEach(link => {
-    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+// ============================================================
+// SCROLL UTILITIES
+// ============================================================
+function scrollToSection(id) {
+  var el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function scrollToEl(id) {
+  var el = document.getElementById(id);
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); closeTOC(); }
+}
+
+// ============================================================
+// TOC PANEL
+// ============================================================
+function toggleTOC() { document.getElementById('toc-panel').classList.toggle('open'); }
+function closeTOC() { document.getElementById('toc-panel').classList.remove('open'); }
+
+function buildTOC() {
+  var tocContent = document.getElementById('toc-content');
+  var sections = document.querySelectorAll('.chapter-divider');
+  var html = '';
+  sections.forEach(function(sec) {
+    var id = sec.id;
+    var titleEl = sec.querySelector('.chapter-title');
+    if (!titleEl) return;
+    var title = titleEl.textContent;
+    html += '<div class="toc-section"><div class="toc-section-title">' + title + '</div>';
+    // Find subsections following this chapter divider
+    var el = sec.nextElementSibling;
+    while (el && !el.classList.contains('chapter-divider')) {
+      if (el.classList.contains('subsection') && el.dataset.sub) {
+        html += '<a class="toc-link" data-toc-id="' + el.id + '" onclick="scrollToEl(\'' + el.id + '\')">' + el.dataset.sub + '</a>';
+      }
+      el = el.nextElementSibling;
+    }
+    html += '</div>';
   });
+  tocContent.innerHTML = html;
+}
+
+// ============================================================
+// SEARCH OVERLAY
+// ============================================================
+var searchOverlay = document.getElementById('search-overlay');
+var searchInput = document.getElementById('search-input');
+var searchResults = document.getElementById('search-results');
+var searchIdx = -1;
+
+// Searchable items: sections and components
+var searchItems = [
+  { id: 'landing', type: 'section', name: 'Overview', desc: 'Automated module version upgrades for HCP Terraform consumers' },
+  { id: 'pipeline-section', type: 'section', name: 'Connected Pipeline', desc: 'Single workflow with two entry points: automated PR analysis and @claude follow-up' },
+  { id: 'pipeline-diagram', type: 'component', name: 'Pipeline Diagram', desc: 'Animated SVG showing Jobs 1-4 flow with Dependabot trigger' },
+  { id: 'escalation-section', type: 'section', name: 'Escalation', desc: 'The @claude fix loop for needs-review and breaking-change PRs' },
+  { id: 'escalation-risk-levels', type: 'component', name: 'Risk Levels', desc: 'Low, medium, high, and critical risk classification cards' },
+  { id: 'decision-section', type: 'section', name: 'Decision Matrix', desc: 'Deterministic risk classification from plan exit code and semver type' },
+  { id: 'decision-matrix', type: 'component', name: 'Matrix Table', desc: '4-row decision matrix: no changes, changes, destroy/replace, plan fails' },
+  { id: 'apply-section', type: 'section', name: 'Apply & Rollback', desc: 'Post-merge apply workflow with structured rollback on failure' },
+  { id: 'apply-paths', type: 'component', name: 'Apply Paths', desc: 'Success path (apply + comment) and failure path (incident + rollback PR)' },
+  { id: 'artifacts-section', type: 'section', name: 'Artifacts', desc: 'Implementation files: workflows, scripts, configs, agent prompts' },
+  { id: 'artifacts-table', type: 'component', name: 'File Inventory', desc: 'All files needed to implement the consumer uplift pipeline' },
+  { id: 'artifacts-phases', type: 'component', name: 'Implementation Phases', desc: 'Phase A (scripts), B (workflows), C (docs), D (optional)' },
+  // Concepts
+  { id: 'decision-section', type: 'concept', name: 'Auto-Merge', desc: 'Only zero-change plans are auto-merged. Any infrastructure change requires review.' },
+  { id: 'decision-section', type: 'concept', name: 'DESTROY/REPLACE', desc: 'Always classified as breaking-change. Merge is blocked regardless of semver type.' },
+  { id: 'escalation-section', type: 'concept', name: '@claude Fix Loop', desc: 'Comment @claude to fix consumer code. Pipeline re-validates after push.' },
+  { id: 'apply-section', type: 'concept', name: 'Rollback PR', desc: 'Draft revert PR created on apply failure. Goes through normal pipeline validation.' },
+  // Scripts/files
+  { id: 'artifacts-table', type: 'script', name: 'classify-version-bump.sh', desc: 'Parse git diff to detect semver bump type (patch/minor/major)' },
+  { id: 'artifacts-table', type: 'script', name: 'scan-module-versions.sh', desc: 'TFC API fallback scanner for version detection' },
+  { id: 'artifacts-table', type: 'workflow', name: 'terraform-consumer-uplift.yml', desc: 'Main pipeline: 4 deterministic jobs + @claude interactive job' },
+  { id: 'artifacts-table', type: 'workflow', name: 'terraform-apply.yml', desc: 'Post-merge apply + rollback on failure' },
+  { id: 'artifacts-table', type: 'agent', name: 'module-upgrade-remediation.md', desc: '@claude remediation playbook for module upgrades' }
+];
+
+var typeColors = {
+  section: '#C4283A', component: '#1A6B7A', concept: '#6B3FA0',
+  script: '#2D7A4F', workflow: '#B87333', agent: '#C4283A'
+};
+var typeLabels = {
+  section: 'Section', component: 'Component', concept: 'Concept',
+  script: 'Script', workflow: 'Workflow', agent: 'Agent'
+};
+
+function openSearch() {
+  searchOverlay.classList.add('open');
+  searchInput.value = ''; searchInput.focus();
+  renderSearchResults('');
+}
+function closeSearch() { searchOverlay.classList.remove('open'); searchIdx = -1; }
+
+function renderSearchResults(query) {
+  var q = query.toLowerCase().trim();
+  if (!q) { searchResults.innerHTML = '<div class="search-empty">Type to search sections, components, concepts...</div>'; return; }
+  var results = [];
+  searchItems.forEach(function(item) {
+    if (item.name.toLowerCase().indexOf(q) !== -1 || item.desc.toLowerCase().indexOf(q) !== -1 || item.type.toLowerCase().indexOf(q) !== -1) {
+      results.push(item);
+    }
+  });
+  if (!results.length) { searchResults.innerHTML = '<div class="search-empty">No results found</div>'; return; }
+  searchResults.innerHTML = results.slice(0, 15).map(function(r, i) {
+    var c = typeColors[r.type] || '#888';
+    return '<div class="search-result' + (i === searchIdx ? ' selected' : '') + '" data-search-id="' + r.id + '"><span class="sr-type" style="color:' + c + ';border-color:' + c + '">' + (typeLabels[r.type] || r.type) + '</span><div><div class="sr-name" style="color:' + c + '">' + r.name + '</div><div class="sr-desc">' + r.desc + '</div></div></div>';
+  }).join('');
+  searchResults.querySelectorAll('.search-result').forEach(function(el) {
+    el.addEventListener('click', function() {
+      closeSearch();
+      var target = document.getElementById(el.dataset.searchId);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+searchInput.addEventListener('input', function() { searchIdx = -1; renderSearchResults(searchInput.value); });
+searchInput.addEventListener('keydown', function(e) {
+  var items = searchResults.querySelectorAll('.search-result');
+  if (e.key === 'ArrowDown') { e.preventDefault(); searchIdx = Math.min(searchIdx + 1, items.length - 1); renderSearchResults(searchInput.value); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); searchIdx = Math.max(searchIdx - 1, 0); renderSearchResults(searchInput.value); }
+  else if (e.key === 'Enter' && items[searchIdx]) items[searchIdx].click();
 });
+searchOverlay.addEventListener('click', function(e) { if (e.target === searchOverlay) closeSearch(); });
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeSearch(); closeTOC(); }
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); openSearch(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+});
+
+// ============================================================
+// INTERSECTION OBSERVER: Fade reveals + TOC highlighting + Header nav
+// ============================================================
+var revealObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('revealed'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.subsection').forEach(function(s) { revealObserver.observe(s); });
+
+var tocObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    var link = document.querySelector('.toc-link[data-toc-id="' + e.target.id + '"]');
+    if (link) {
+      if (e.isIntersecting) link.classList.add('active');
+      else link.classList.remove('active');
+    }
+  });
+  // Update header nav active state
+  entries.forEach(function(e) {
+    if (e.isIntersecting) {
+      var sec = e.target.closest('[data-section]');
+      if (!sec) sec = e.target;
+      if (sec && sec.dataset.section) {
+        document.querySelectorAll('.header-link').forEach(function(l) { l.classList.remove('active'); });
+        var btn = document.querySelector('.header-link[onclick*="' + sec.dataset.section + '"]');
+        if (btn) btn.classList.add('active');
+      }
+    }
+  });
+}, { threshold: 0.2, rootMargin: '-50px 0px -50% 0px' });
+document.querySelectorAll('.subsection, .chapter-divider[data-section], #landing').forEach(function(s) { tocObserver.observe(s); });
+
+// ============================================================
+// INIT
+// ============================================================
+buildTOC();
+updateProgress();
 </script>
 </body>
 </html>

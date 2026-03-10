@@ -117,25 +117,26 @@ Risk classification drives the automated decision. The matrix is applied determi
 ```
                       PATCH           MINOR           MAJOR
                       -----           -----           -----
-Plan succeeds +       AUTO-MERGE      AUTO-MERGE      NEEDS-REVIEW
-changes <= 5          risk:low        risk:low        risk:medium
+Plan succeeds,        AUTO-MERGE      AUTO-MERGE      AUTO-MERGE
+no changes (exit 0)   risk:low        risk:low        risk:low
 
-Plan succeeds +       NEEDS-REVIEW    NEEDS-REVIEW    NEEDS-REVIEW
-changes > 5           risk:medium     risk:medium     risk:high
+Plan succeeds         NEEDS-REVIEW    NEEDS-REVIEW    NEEDS-REVIEW
+with changes          risk:medium     risk:medium     risk:high
+
+Any DESTROY/REPLACE   BREAKING-       BREAKING-       BREAKING-
+in plan               CHANGE          CHANGE          CHANGE
+                      risk:high       risk:high       risk:critical
 
 Plan fails (exit 1)   BREAKING-       BREAKING-       BREAKING-
                       CHANGE          CHANGE          CHANGE
                       risk:high       risk:high       risk:critical
-
-Any DESTROY/REPLACE   NEEDS-REVIEW    NEEDS-REVIEW    BREAKING-CHANGE
-in plan               risk:high       risk:high       risk:critical
 ```
 
 **Key principles:**
-1. Patch and minor bumps with small plan diff (<=5 resources) are safe to auto-merge
-2. Any DESTROY or REPLACE action in the plan escalates to at minimum NEEDS-REVIEW
+1. Only zero-change plans are auto-merged — any infrastructure change requires human review
+2. Any DESTROY or REPLACE action in the plan classifies as BREAKING-CHANGE (merge blocked)
 3. Plan failures (exit 1) always classify as BREAKING-CHANGE
-4. Major version bumps are never auto-merged, even with zero breaking changes
+4. Major version bumps with changes get risk:high; patch/minor with changes get risk:medium
 5. The matrix is fully deterministic — no AI involved in risk assessment
 
 ---
@@ -264,10 +265,10 @@ Only runs if plan exit code is 2 (changes detected). A deterministic bash script
 - `plan_summary` (add/change/destroy/replace/total) from Job 2
 
 **Matrix Rules (checked in priority order):**
-1. If destroy > 0 or replace > 0 → DESTROY/REPLACE row
-2. If total changes > 5 → high-change row
-3. If total changes <= 5 → low-change row
-4. Apply semver column (patch/minor/major)
+1. If destroy > 0 or replace > 0 → BREAKING-CHANGE (high/critical)
+2. If total changes = 0 → AUTO-MERGE (low)
+3. If total changes > 0 → NEEDS-REVIEW (medium for patch/minor, high for major)
+4. Apply semver column (patch/minor/major) for risk level
 
 **Output:** Same structured JSON format as before, but with empty `breaking_changes`, `security_findings`, `adaptations_applied`, and `interface_diff` fields. These fields are preserved for compatibility with Job 4 but are not populated by the deterministic pipeline.
 
@@ -502,7 +503,7 @@ This gives the ops team full context, a prepared rollback path, and human contro
 ## 12. Success Criteria
 
 1. Dependabot PR triggers the pipeline and produces a structured analysis
-2. Low-risk patches (patch/minor, no breaking, small plan) auto-merge
+2. Zero-change plans (any semver type) auto-merge; any plan with changes requires review
 3. High-risk changes are blocked with detailed analysis and `@claude` follow-up instructions
 4. `@claude` mention on a blocked PR provides interactive deep analysis with MCP tools
 5. Post-merge apply successfully triggers HCP Terraform run
