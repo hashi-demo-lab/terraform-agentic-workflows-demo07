@@ -642,8 +642,8 @@ body {
 <!-- ===== ESCALATION FLOW ===== -->
 <div class="chapter-divider" id="escalation-section">
   <div class="chapter-number">Escalation</div>
-  <h2 class="chapter-title">The @claude Loop</h2>
-  <p class="chapter-subtitle">When automated analysis labels a PR as needs-review or breaking-change, humans can <code>@claude</code> for interactive follow-up in the same workflow</p>
+  <h2 class="chapter-title">The @claude Fix Loop</h2>
+  <p class="chapter-subtitle">When the pipeline labels a PR as needs-review or breaking-change, comment <code>@claude</code> to have it fix the consumer code and push — the pipeline then re-runs automatically</p>
 </div>
 
 <div class="subsection revealed">
@@ -658,7 +658,7 @@ body {
     </div>
     <div class="ed-card" style="border-top: 3px solid var(--yellow)">
       <h3>Medium Risk: @claude Available</h3>
-      <p>Plan changes &gt; 5, or breaking changes that were auto-adapted. Labels applied, reviewer requested. Comment says: <code>@claude for deeper analysis</code>.</p>
+      <p>Plan changes &gt; 5 or major version bump. Labels applied, reviewer requested. Comment <code>@claude</code> to investigate and reduce blast radius if possible.</p>
       <div class="node-row" style="margin-top:8px">
         <span class="node node-mcp">risk:medium</span>
         <span class="node node-template">needs-review</span>
@@ -666,15 +666,15 @@ body {
     </div>
     <div class="ed-card" style="border-top: 3px solid var(--orange)">
       <h3>High Risk: @claude Recommended</h3>
-      <p>Major version bump, DESTROY in plan, or security finding. Detailed analysis posted. <code>@claude</code> can make code changes and push to branch.</p>
+      <p>DESTROY/REPLACE in plan or major bump with large diff. Comment <code>@claude</code> to fix consumer code — it adapts config, validates, and pushes to the PR branch.</p>
       <div class="node-row" style="margin-top:8px">
         <span class="node node-artifact">risk:high</span>
-        <span class="node node-agent">@claude adapt</span>
+        <span class="node node-agent">@claude fix</span>
       </div>
     </div>
     <div class="ed-card" style="border-top: 3px solid var(--red)">
       <h3>Critical: Blocked</h3>
-      <p>Cannot adapt breaking changes, or plan failed. Merge blocked. Requires manual investigation -- <code>@claude</code> provides guided analysis.</p>
+      <p>Plan failed (exit 1) on a major bump. Merge blocked. Comment <code>@claude</code> to diagnose the error, fix consumer code, and push — pipeline re-validates after the fix.</p>
       <div class="node-row" style="margin-top:8px">
         <span class="node node-cmd">risk:critical</span>
         <span class="node node-cmd">breaking-change</span>
@@ -688,8 +688,8 @@ body {
   <div class="card-grid single">
     <div class="ed-card">
       <h3>Single Workflow, Two Entry Points</h3>
-      <p>The <code>terraform-consumer-uplift.yml</code> workflow has two trigger sections. Jobs 1-4 run on <code>pull_request</code> events (automated). The interactive job runs on <code>issue_comment</code> when <code>@claude</code> is mentioned. Both share the same checkout, MCP config, and agent context.</p>
-      <p style="margin-top:8px">When <code>@claude</code> pushes code changes to the PR branch, it re-triggers Jobs 1-4 automatically (via <code>synchronize</code> event). This creates a natural re-validation loop: human asks for help &rarr; Claude adapts code &rarr; pipeline re-validates &rarr; decision updates.</p>
+      <p>The <code>terraform-consumer-uplift.yml</code> workflow has two trigger sections. Jobs 1-4 run on <code>pull_request</code> events (automated, deterministic). The interactive job runs on <code>issue_comment</code> when <code>@claude</code> is mentioned. Claude checks out the PR branch, runs <code>terraform plan</code> to capture the current state, then uses MCP tools to investigate module interface changes and fix consumer code.</p>
+      <p style="margin-top:8px">When <code>@claude</code> pushes code fixes to the PR branch, it re-triggers Jobs 1-4 automatically (via <code>synchronize</code> event). This creates a fix loop: human comments <code>@claude</code> &rarr; Claude fixes code &rarr; pushes &rarr; pipeline re-validates &rarr; risk re-assessed. Claude never approves or merges -- the pipeline handles that.</p>
     </div>
   </div>
 </div>
@@ -722,7 +722,7 @@ body {
       <td class="risk-high">NEEDS-REVIEW<br/>risk:high</td>
     </tr>
     <tr>
-      <td><span title="Plan exit code 1 (error). The module version bump introduces changes that prevent Terraform from planning. Requires @claude interactive analysis or manual intervention.">Plan fails (exit 1)</span></td>
+      <td><span title="Plan exit code 1 (error). The module version bump introduces changes that prevent Terraform from planning. Comment @claude to diagnose and fix, or intervene manually.">Plan fails (exit 1)</span></td>
       <td class="risk-high">BREAKING-CHANGE<br/>risk:high</td>
       <td class="risk-high">BREAKING-CHANGE<br/>risk:high</td>
       <td class="risk-crit">BREAKING-CHANGE<br/>risk:critical</td>
@@ -819,9 +819,9 @@ body {
       <td>Phase D: Self-updating dashboard issue for pending upgrades</td>
     </tr>
     <tr>
-      <td>.github/agents/module-upgrade-analyst.md</td>
+      <td>.github/agents/module-upgrade-remediation.md</td>
       <td><span class="node node-agent">agent</span></td>
-      <td>Agent prompt for claude-code-action analysis</td>
+      <td>@claude remediation playbook for module upgrades</td>
     </tr>
     <tr>
       <td>.foundations/scripts/bash/classify-version-bump.sh</td>
@@ -860,7 +860,7 @@ body {
     <div class="ed-card" style="border-top: 3px solid var(--purple)">
       <h3>Phase B: Workflows</h3>
       <ul>
-        <li>module-upgrade-analyst.md</li>
+        <li>module-upgrade-remediation.md</li>
         <li>consumer-uplift.yml</li>
         <li>consumer-uplift-apply.yml</li>
       </ul>

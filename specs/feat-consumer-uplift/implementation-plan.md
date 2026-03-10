@@ -162,7 +162,7 @@ in plan               risk:high       risk:high       risk:critical
 
 | File | Purpose |
 |------|---------|
-| `.github/agents/module-upgrade-analyst.md` | Claude Code Action agent prompt for automated analysis |
+| `.github/agents/module-upgrade-remediation.md` | Claude Code Action agent prompt for automated analysis |
 
 The agent prompt defines the analysis capabilities for interactive `@claude` follow-up on PRs. It is NOT used in the automated pipeline (Job 3 is deterministic). Key features:
 - Uses Terraform MCP tools (`get_private_module_details`, `search_private_modules`)
@@ -269,7 +269,7 @@ Only runs if plan exit code is 2 (changes detected). A deterministic bash script
 3. If total changes <= 5 → low-change row
 4. Apply semver column (patch/minor/major)
 
-**Output:** Same structured JSON format as before, but with empty `breaking_changes`, `security_findings`, `adaptations_applied`, and `interface_diff` fields. These fields are preserved for compatibility with Job 4 but are only populated when `@claude` interactive analysis runs.
+**Output:** Same structured JSON format as before, but with empty `breaking_changes`, `security_findings`, `adaptations_applied`, and `interface_diff` fields. These fields are preserved for compatibility with Job 4 but are not populated by the deterministic pipeline.
 
 No claude-code-action, no MCP tools, no AI. The risk assessment is fully scripted.
 
@@ -290,15 +290,16 @@ PR title is prefixed with emoji + semver tag for visual distinction:
 - `[MAJOR]` Major version bump (always needs review)
 - `[BREAKING]` Plan failed (exit 1)
 
-### Interactive Follow-Up (@claude)
+### Interactive Fix (@claude)
 
-When a PR is labeled `needs-review` or `breaking-change`, the decision comment instructs the user to `@claude` on the PR for interactive analysis. The same workflow handles this via the `issue_comment` trigger:
+When a PR is labeled `needs-review` or `breaking-change`, the decision comment instructs the user to comment `@claude` to fix the code. The same workflow handles this via the `issue_comment` trigger:
 
-- Full MCP tool access for deeper investigation
-- Can make code changes and push to the PR branch
-- Can re-run interface diff with different parameters
-- Responds as a PR comment with findings
-- Re-triggers the pipeline if code changes are pushed
+- Checks out PR branch and runs `terraform plan` to capture current errors
+- Uses Terraform MCP tools to compare old vs new module interfaces
+- **Fixes consumer code**: adds missing variables, updates removed outputs, fixes type mismatches
+- Validates fixes with `terraform validate` and `terraform plan`
+- Commits and pushes to the PR branch — triggering pipeline re-run
+- Never approves or merges — the pipeline re-assesses risk after the fix
 
 ### Post-Merge Apply
 
@@ -372,7 +373,7 @@ Self-updating GitHub issue that aggregates all pending Dependabot PRs:
 
 ### Phase B: Workflows & Agent
 
-5. Create `module-upgrade-analyst.md` CI agent definition
+5. Create `module-upgrade-remediation.md` CI agent definition
 6. Create `terraform-consumer-uplift.yml` (main pipeline + interactive)
 7. Create `terraform-apply.yml` (post-merge apply + rollback on failure)
 

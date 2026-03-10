@@ -282,7 +282,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `### Terraform Plan Failed\n\nThe plan command returned an error, indicating this module version bump introduces breaking changes that prevent planning.\n\n**Action**: This PR is blocked. Review the plan output in the workflow logs and use \`@claude\` on this PR for interactive analysis.\n\ncc @claude`
+              body: `### Terraform Plan Failed\n\nThe plan command returned an error, indicating this module version bump introduces breaking changes that prevent planning.\n\n**Action**: This PR is blocked. Comment \`@claude\` on this PR to diagnose the error, fix the consumer code, and push — the pipeline will re-run automatically.\n\ncc @claude`
             });
 
   # ─────────────────────────────────────────────────
@@ -560,7 +560,7 @@ jobs:
             if (decision === 'auto-merge') {
               body += ` · ✅ This PR was auto-merged.\n`;
             } else if (decision === 'needs-review' || decision === 'breaking-change') {
-              body += `\n\n💬 **Need deeper analysis?** Comment \`@claude\` on this PR for interactive follow-up with full MCP tool access.\n`;
+              body += `\n\n🔧 **Need this fixed?** Comment \`@claude\` on this PR — it will diagnose the issue, fix the consumer code, and push. The pipeline re-runs automatically after the fix.\n`;
             }
 
             await github.rest.issues.createComment({
@@ -608,10 +608,10 @@ jobs:
             }
 
   # ─────────────────────────────────────────────────
-  # Interactive: @claude mention on PR
+  # Interactive: @claude mention on PR — fix/adapt code
   # ─────────────────────────────────────────────────
   interactive:
-    name: "Interactive Analysis (@claude)"
+    name: "Interactive Fix (@claude)"
     if: >-
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request &&
@@ -624,19 +624,78 @@ jobs:
           ref: ${{ github.event.issue.pull_request.head.ref || '' }}
           fetch-depth: 0
 
-      - name: Run Claude Interactive
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          cli_config_credentials_hostname: app.terraform.io
+          cli_config_credentials_token: ${{ secrets.TFE_TOKEN }}
+
+      - name: Collect pipeline context
+        id: context
+        run: |
+          # Get PR labels for pipeline state
+          LABELS=$(gh pr view "${{ github.event.issue.number }}" --json labels --jq '[.labels[].name] | join(",")')
+          echo "labels=${LABELS}" >> "$GITHUB_OUTPUT"
+
+          # Determine pipeline outcome from labels
+          if echo "$LABELS" | grep -q "breaking-change"; then
+            echo "outcome=breaking-change" >> "$GITHUB_OUTPUT"
+          elif echo "$LABELS" | grep -q "needs-review"; then
+            echo "outcome=needs-review" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Try terraform init + plan to capture current errors
+          terraform init -input=false 2>&1 | tail -20 > /tmp/init_output.txt || true
+          terraform plan -input=false -no-color 2>&1 | tail -50 > /tmp/plan_output.txt || true
+
+          # Make plan output available as env var (truncated for prompt size)
+          {
+            echo "plan_output<<PLAN_EOF"
+            tail -50 /tmp/plan_output.txt
+            echo "PLAN_EOF"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run Claude Fix
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: "--model claude-sonnet-4-6 --max-turns 15"
           prompt: |
-            You are a Terraform module upgrade analyst responding to a question on a PR.
+            You are a Terraform module upgrade fixer. Your job is to FIX consumer code so the module version upgrade succeeds — not to analyze or report.
 
-            The user's comment: ${{ github.event.comment.body }}
+            ## Pipeline State
+            - **PR labels**: ${{ steps.context.outputs.labels }}
+            - **Pipeline outcome**: ${{ steps.context.outputs.outcome }}
+            - **User's request**: ${{ github.event.comment.body }}
 
-            Read the agent definition at `.github/agents/module-upgrade-analyst.md` for your full capabilities.
+            ## Current Plan Output
+            ```
+            ${{ steps.context.outputs.plan_output }}
+            ```
 
-            You have access to Terraform MCP tools for deep investigation of the private registry modules.
-            You can make code changes and push them to this PR branch if needed.
+            ## Instructions
 
-            Respond conversationally with your findings. If you make code changes, note that the pipeline will re-run automatically.
+            Read `.github/agents/module-upgrade-remediation.md` for the full playbook.
+
+            Your goal is to make `terraform plan` succeed cleanly. Follow this process:
+
+            1. **Diagnose**: Read the plan output above. If it errored (exit 1), identify what broke — missing variables, removed outputs, changed types, renamed resources.
+            2. **Investigate**: Use Terraform MCP tools (`get_private_module_details`) to compare the old and new module interfaces. Understand what changed.
+            3. **Fix**: Edit the `.tf` files to adapt consumer code:
+               - Add new required variables with sensible defaults (mark with `# TODO: Review value` if uncertain)
+               - Update references to removed/renamed outputs
+               - Fix type mismatches
+               - Update source paths if submodule structure changed
+            4. **Validate**: Run `terraform init && terraform validate && terraform plan` to confirm your fixes work.
+            5. **Push**: Commit and push your changes to this PR branch. The pipeline will re-run automatically and re-assess risk.
+
+            **Rules**:
+            - DO NOT just analyze and report — make actual code changes
+            - If plan already succeeds (exit 2 with changes), explain what the changes are and whether the `needs-review` label is warranted, but still check if any improvements can be made
+            - If you cannot fix an issue, explain specifically what's blocking and what manual intervention is needed
+            - Never approve or merge — the pipeline handles that after re-run
