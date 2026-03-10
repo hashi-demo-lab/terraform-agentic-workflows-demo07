@@ -1,0 +1,86 @@
+name: "Claude Review (@claude)"
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+concurrency:
+  group: claude-review-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+env:
+  # TFE_TOKEN exists in both Actions and Dependabot secret stores.
+  # GitHub resolves the correct store based on the trigger context.
+  TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+
+jobs:
+  review:
+    name: "Claude Review"
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref || '' }}
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          cli_config_credentials_hostname: app.terraform.io
+          cli_config_credentials_token: ${{ env.TFE_TOKEN }}
+
+      - name: Collect pipeline context
+        id: context
+        run: |
+          # Get PR labels for pipeline state
+          LABELS=$(gh pr view "${{ github.event.issue.number }}" --json labels --jq '[.labels[].name] | join(",")')
+
+          # Determine pipeline outcome from labels
+          OUTCOME="unknown"
+          if echo "$LABELS" | grep -q "breaking-change"; then
+            OUTCOME="breaking-change"
+          elif echo "$LABELS" | grep -q "needs-review"; then
+            OUTCOME="needs-review"
+          fi
+
+          # Run terraform init + plan to capture current state
+          terraform init -input=false 2>&1 | tail -20 > /tmp/init_output.txt || true
+          terraform plan -input=false -no-color 2>&1 | tail -50 > /tmp/plan_output.txt || true
+
+          # Write context file for Claude to read
+          {
+            echo "# Pipeline Context"
+            echo ""
+            echo "## State"
+            echo "- **PR labels**: ${LABELS}"
+            echo "- **Pipeline outcome**: ${OUTCOME}"
+            echo ""
+            echo "## Current Plan Output"
+            echo '```'
+            cat /tmp/plan_output.txt
+            echo '```'
+          } > .claude-pipeline-context.md
+
+          echo "Pipeline context written to .claude-pipeline-context.md"
+          echo "Labels: ${LABELS}"
+          echo "Outcome: ${OUTCOME}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run Claude
+        uses: anthropics/claude-code-action@v1.0.70
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          trigger_phrase: "@claude"
+          claude_args: "--model claude-sonnet-4-6 --max-turns 15"

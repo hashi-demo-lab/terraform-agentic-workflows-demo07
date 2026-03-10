@@ -324,7 +324,7 @@ header "GitHub Secrets"
 # update them in the repo settings UI or via gh secret set after setup.
 PLACEHOLDER="REPLACE_ME"
 
-for SECRET in TFE_TOKEN CLAUDE_CODE_OAUTH_TOKEN; do
+for SECRET in TFE_TOKEN CLAUDE_CODE_OAUTH_TOKEN GH_PAT; do
   if gh api "repos/${GITHUB_REPO}/actions/secrets/${SECRET}" --silent 2>/dev/null; then
     success "${SECRET} already set"
   else
@@ -334,16 +334,23 @@ for SECRET in TFE_TOKEN CLAUDE_CODE_OAUTH_TOKEN; do
   fi
 done
 
-# TFE_TOKEN_DEPENDABOT — Dependabot secret (separate store from Actions secrets)
-if gh api "repos/${GITHUB_REPO}/dependabot/secrets/TFE_TOKEN_DEPENDABOT" --silent 2>/dev/null; then
-  success "TFE_TOKEN_DEPENDABOT already set"
-else
-  echo "$PLACEHOLDER" | gh secret set TFE_TOKEN_DEPENDABOT --repo "$GITHUB_REPO" --app dependabot 2>/dev/null \
-    && success "TFE_TOKEN_DEPENDABOT created (needs value)" \
-    || warn "Failed to create TFE_TOKEN_DEPENDABOT"
-fi
+# Dependabot secrets (separate store from Actions secrets).
+# TFE_TOKEN_DEPENDABOT — PMR read-only, used by dependabot.yml for registry scanning.
+# TFE_TOKEN            — full workspace access, used by workflow terraform init/plan/apply.
+#                        Same name as the Actions secret; GitHub resolves the correct store
+#                        automatically based on whether the run was triggered by Dependabot.
+for DEP_SECRET in TFE_TOKEN_DEPENDABOT TFE_TOKEN; do
+  if gh api "repos/${GITHUB_REPO}/dependabot/secrets/${DEP_SECRET}" --silent 2>/dev/null; then
+    success "${DEP_SECRET} (dependabot) already set"
+  else
+    echo "$PLACEHOLDER" | gh secret set "$DEP_SECRET" --repo "$GITHUB_REPO" --app dependabot 2>/dev/null \
+      && success "${DEP_SECRET} (dependabot) created (needs value)" \
+      || warn "Failed to create ${DEP_SECRET} (dependabot)"
+  fi
+done
 
 info "Set secret values at: https://github.com/${GITHUB_REPO}/settings/secrets/actions"
+info "Set Dependabot values at: https://github.com/${GITHUB_REPO}/settings/secrets/dependabot"
 
 # ─── Print next steps ───────────────────────────────────────────────────────
 header "Setup Complete"
