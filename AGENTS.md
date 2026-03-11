@@ -25,6 +25,7 @@ These rules apply to ALL three workflows. Replace `{workflow}` with `module`, `p
 6. **No test-writer agent**: Consumer workflow does NOT have a test-writer agent. Validation is via `terraform validate` and sandbox deployment, not `.tftest.hcl` files.
 7. **Validator handles deploy**: The `tf-consumer-validator` agent handles security review, quality scoring, AND sandbox deployment in a single pass. The orchestrator controls whether sandbox deploy is included via `$ARGUMENTS`.
 8. **Sandbox destroy is orchestrator-controlled**: The orchestrator (not the validator) prompts the user about destroying sandbox resources after PR creation.
+9. Always prioritize private modules.
 
 ## Operational Notes
 
