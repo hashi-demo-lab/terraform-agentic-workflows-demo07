@@ -10,23 +10,35 @@ permissions:
   issues: write
   id-token: write
 
-concurrency:
-  group: claude-review-${{ github.event.issue.number }}
-  cancel-in-progress: true
-
 env:
   # TFE_TOKEN exists in both Actions and Dependabot secret stores.
   # GitHub resolves the correct store based on the trigger context.
   TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
 
 jobs:
-  review:
-    name: "Claude Review"
+  # ── Gate: fast filter to prevent bot comments from entering the concurrency group ──
+  # GitHub evaluates concurrency BEFORE job-level `if`, so a bot comment
+  # (e.g. Claude's "working…" progress update) would cancel an in-progress
+  # review via cancel-in-progress even though the job would be skipped.
+  # This gate job has NO concurrency group, so bot comments exit immediately
+  # without affecting running reviews.
+  gate:
+    name: "Filter"
     if: >-
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '@claude') &&
       github.event.comment.user.login != 'claude[bot]' &&
       github.event.comment.user.login != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Comment from ${{ github.event.comment.user.login }} passed gate"
+
+  review:
+    name: "Claude Review"
+    needs: gate
+    concurrency:
+      group: claude-review-${{ github.event.issue.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR branch
