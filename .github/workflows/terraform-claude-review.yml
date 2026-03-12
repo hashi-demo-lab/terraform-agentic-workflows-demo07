@@ -41,10 +41,9 @@ jobs:
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR branch
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.issue.pull_request.head.ref || '' }}
           fetch-depth: 0
 
       - name: Setup Terraform
@@ -54,11 +53,16 @@ jobs:
           cli_config_credentials_hostname: app.terraform.io
           cli_config_credentials_token: ${{ env.TFE_TOKEN }}
 
+      # track_progress forces tag mode (comment tracking + PR context).
+      # Without it, 'prompt' on issue_comment events triggers agent mode
+      # which runs silently without posting results to the PR.
+      # The prompt is appended as <custom_instructions> to the full PR context.
       - name: Run Claude
         uses: anthropics/claude-code-action@v1.0.70
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           trigger_phrase: "@claude"
+          track_progress: true
           claude_args: "--model claude-sonnet-4-6 --max-turns 15"
           prompt: |
             Read and follow .claude/agents/module-upgrade-remediation.md as your playbook for this task.
