@@ -62,7 +62,9 @@ jobs:
       # Without it, 'prompt' on issue_comment events triggers agent mode
       # which runs silently without posting results to the PR.
       # The prompt is appended as <custom_instructions> to the full PR context.
-      # --setting-sources excludes .claude/settings.local.json (local dev permissions).
+      # Tag mode sets allowedTools which auto-enables sandbox in Claude Code.
+      # Sandbox conflicts with settings loaded from file paths. Passing
+      # --settings as inline JSON satisfies the sandbox check.
       - name: Run Claude
         uses: anthropics/claude-code-action@5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5  # latest main (2026-03-12)
         with:
@@ -70,6 +72,6 @@ jobs:
           trigger_phrase: "@claude"
           track_progress: true
           show_full_output: true
-          claude_args: "--model claude-sonnet-4-6 --max-turns 15 --setting-sources user,project"
+          claude_args: "--model claude-sonnet-4-6 --max-turns 15 --settings '{}'"
           prompt: |
             Read and follow .claude/agents/module-upgrade-remediation.md as your playbook for this task.
