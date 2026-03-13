@@ -53,6 +53,22 @@ jobs:
           cli_config_credentials_hostname: app.terraform.io
           cli_config_credentials_token: ${{ env.TFE_TOKEN }}
 
+      - name: Terraform Init
+        run: terraform init -input=false
+        continue-on-error: true
+
+      # Run pre-commit to surface ALL issues in a single pass (validate,
+      # fmt, tflint, docs, trivy, etc.) so Claude sees the full picture
+      # rather than discovering errors one-at-a-time across pipeline reruns.
+      - name: Run pre-commit checks
+        uses: pre-commit/action@v3.0.1
+        continue-on-error: true
+
+      - name: Capture pre-commit results
+        if: always()
+        run: |
+          pre-commit run --all-files 2>&1 | tee .pre-commit-results.txt || true
+
       # .mcp.json uses Docker (local dev); .mcp-ci.json uses npx (CI-friendly).
       # The action hardcodes enableAllProjectMcpServers=true, so it loads .mcp.json.
       - name: Use CI MCP config
@@ -74,4 +90,8 @@ jobs:
           show_full_output: true
           claude_args: "--model claude-sonnet-4-6 --max-turns 15 --settings '{}'"
           prompt: |
-            Read and follow .claude/agents/module-upgrade-remediation.md as your playbook for this task.
+            Pre-commit validation results are in .pre-commit-results.txt — read this file FIRST
+            to understand ALL issues (validate errors, lint failures, formatting, etc.) before
+            making any changes. Fix every issue found, not just the first one.
+
+            Then read and follow .claude/agents/module-upgrade-remediation.md as your playbook for this task.
