@@ -109,7 +109,11 @@ jobs:
           trigger_phrase: "@claude"
           track_progress: true
           show_full_output: true
-          claude_args: "--model claude-sonnet-4-6 --max-turns 45 --settings '{}' --allowedTools 'Bash(terraform:*) Bash(git:*)'"
+          settings: '{}'
+          claude_args: |
+            --model claude-sonnet-4-6
+            --max-turns 45
+            --allowedTools Bash(terraform:*),Bash(git:*)
           prompt: |
             Read .pre-commit-results.txt and .plan-results.txt for initial context, then
             read and follow .claude/agents/module-upgrade-remediation.md as your playbook.
