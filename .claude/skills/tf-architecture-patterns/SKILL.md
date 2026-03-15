@@ -22,24 +22,6 @@ This repository develops well-structured, reusable Terraform modules using raw r
 - Use semantic versioning (major.minor.patch) with clear CHANGELOG entries
 - Use `>=` version constraints for providers in modules (maximize consumer compatibility)
 
-### Module Usage Pattern (in examples/)
-
-```hcl
-# examples/basic/main.tf
-module "this" {
-  source = "../.."
-
-  name        = "my-vpc"
-  vpc_cidr    = "10.0.0.0/16"
-  environment = "dev"
-
-  tags = {
-    Application = "example"
-    ManagedBy   = "terraform"
-  }
-}
-```
-
 ## Project Structure Convention
 
 ```
@@ -54,7 +36,6 @@ module "this" {
 ├── examples/
 │   ├── basic/           # Minimal usage example (with provider config)
 │   └── complete/        # Full-featured example
-├── modules/             # Submodules (optional)
 ├── tests/               # Terraform test files (.tftest.hcl)
 └── .github/
     └── workflows/       # CI/CD pipelines
@@ -73,34 +54,3 @@ module "this" {
 ## Security-First Defaults
 
 Security defaults per constitution sections 1.2 and 4.x. Key: zero trust, encryption by default, least privilege, `sensitive = true` on secrets.
-
-## AWS Style Requirements
-
-### Mandatory Resource Tagging (AWS-TAG-001 - MUST)
-
-All taggable AWS resources MUST support tags via a `tags` variable. Use `merge()` to combine consumer tags with module defaults:
-
-```hcl
-resource "aws_vpc" "this" {
-  # ...
-  tags = merge(var.tags, { Name = var.name })
-}
-```
-
-Note: `default_tags` configuration belongs in `examples/` provider blocks, not in the module root.
-
-### AWS Resource Naming (AWS-NAME-001 - SHOULD)
-
-Use `this` for single primary resources. Use descriptive names for multiples:
-
-```hcl
-resource "aws_vpc" "this" { ... }
-resource "aws_subnet" "public" { ... }
-resource "aws_subnet" "private" { ... }
-```
-
-### AWS Provider Configuration (AWS-PROV-001 - SHOULD)
-
-- Use `>=` version constraints for providers in modules
-- Multi-region: use clear provider aliases in examples
-- Root module MUST NOT contain provider configuration blocks
