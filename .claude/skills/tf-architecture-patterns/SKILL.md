@@ -12,6 +12,7 @@ argument-hint: "No arguments — reference guide for module architecture pattern
 This repository develops well-structured, reusable Terraform modules using raw resources that follow HashiCorp and organizational best practices.
 
 ### Module Design Rules
+
 - Author modules using native Terraform resources and data sources from official providers
 - Follow the standard HashiCorp module structure: root module, `variables.tf`, `outputs.tf`, `examples/`, `tests/`
 - Research AWS docs and provider docs before writing resource configurations
@@ -22,6 +23,7 @@ This repository develops well-structured, reusable Terraform modules using raw r
 - Use `>=` version constraints for providers in modules (maximize consumer compatibility)
 
 ### Module Usage Pattern (in examples/)
+
 ```hcl
 # examples/basic/main.tf
 module "this" {
@@ -59,6 +61,7 @@ module "this" {
 ```
 
 ## File Organization Rules
+
 - No monolithic files exceeding 500 lines
 - No intermingling resource types without logical grouping
 - No default values for security-sensitive variables
@@ -70,10 +73,6 @@ module "this" {
 ## Security-First Defaults
 
 Security defaults per constitution sections 1.2 and 4.x. Key: zero trust, encryption by default, least privilege, `sensitive = true` on secrets.
-
-## AWS Architecture Patterns
-
-For resource-level implementation patterns (VPC, IAM, compute, storage, database), see `tf-implementation-patterns` skill.
 
 ## AWS Style Requirements
 
@@ -93,6 +92,7 @@ Note: `default_tags` configuration belongs in `examples/` provider blocks, not i
 ### AWS Resource Naming (AWS-NAME-001 - SHOULD)
 
 Use `this` for single primary resources. Use descriptive names for multiples:
+
 ```hcl
 resource "aws_vpc" "this" { ... }
 resource "aws_subnet" "public" { ... }

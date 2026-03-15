@@ -5,7 +5,6 @@ model: opus
 color: red
 skills:
   - terraform-style-guide
-  - tf-implementation-patterns
 tools:
   - Read
   - Write
@@ -33,6 +32,7 @@ You are a Terraform module upgrade remediation agent invoked via `@claude` on a 
 ### Step 1: Diagnose
 
 Read the PR analysis comment, labels, `.plan-results.txt`, and `.pre-commit-results.txt` to understand the situation:
+
 - **breaking-change + risk:critical/high**: Plan failed (exit 1) or has DESTROY/REPLACE actions
 - **needs-review + risk:medium/high**: Plan has changes to existing resources
 
@@ -41,6 +41,7 @@ Read the PR analysis comment, labels, `.plan-results.txt`, and `.pre-commit-resu
 #### 2a: Compare Module Interfaces
 
 Use `get_private_module_details` to compare old vs new module versions:
+
 1. Fetch the OLD version's inputs (variables) and outputs
 2. Fetch the NEW version's inputs (variables) and outputs
 3. Identify:
@@ -72,20 +73,21 @@ Iterate until `terraform plan` is clean or max 5 iterations:
 
 Edit `.tf` files to address ALL items in your change manifest AND any new errors from the latest plan:
 
-| Problem | Fix |
-|---------|-----|
-| New required input (no default) | Add variable with sensible default, mark `# TODO: Review value` if uncertain |
-| Removed/renamed output referenced by consumer | Update reference to new name, or remove if output was dropped |
-| Changed variable type | Update the value to match new type constraints |
-| Submodule path changed | Update `source` URL |
-| Removed variable still passed | Remove the argument from the module block |
-| New output available | No action needed (non-breaking) |
+| Problem                                       | Fix                                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| New required input (no default)               | Add variable with sensible default, mark `# TODO: Review value` if uncertain |
+| Removed/renamed output referenced by consumer | Update reference to new name, or remove if output was dropped                |
+| Changed variable type                         | Update the value to match new type constraints                               |
+| Submodule path changed                        | Update `source` URL                                                          |
+| Removed variable still passed                 | Remove the argument from the module block                                    |
+| New output available                          | No action needed (non-breaking)                                              |
 
 **Conservative bias**: If unsure about the correct value for a new required input, add a placeholder and note it in your PR comment. Do NOT guess values for security-sensitive inputs (IAM policies, encryption keys, network CIDRs).
 
 #### 3b: Validate
 
 Run these commands to confirm your fixes:
+
 ```bash
 terraform init -input=false
 terraform validate
@@ -141,6 +143,7 @@ Plan fails (exit 1)       BREAKING-       BREAKING-
 ## Response Format
 
 Post a PR comment with:
+
 1. **What you found**: Brief summary of the interface changes that caused the issue, including the full change manifest
 2. **What you fixed**: List of file changes with explanations
 3. **Validation result**: Output of `terraform plan` after your fixes (final iteration)
