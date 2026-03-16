@@ -1,13 +1,13 @@
-# tf-module-plan Flow Diagram
+# tf-provider-plan Flow Diagram
 
-Mapping of the `tf-module-plan` orchestrator skill and its interaction with the `tf-module-research` and `tf-module-design` agents.
+Mapping of the `tf-provider-plan` orchestrator skill and its interaction with the `tf-provider-research` and `tf-provider-design` agents.
 
 ## Full Flow
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                      tf-module-plan (Orchestrator Skill)                     │
-│                           Phases 1 + 2                                   │
+│                      tf-provider-plan (Orchestrator Skill)              │
+│                           Phases 1 + 2                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  PHASE 1: REQUIREMENTS & RESEARCH                                        │
@@ -17,113 +17,130 @@ Mapping of the `tf-module-plan` orchestrator skill and its interaction with the 
 │  │          gate_passed=false? ──Yes──▶ STOP                          │  │
 │  │                │ OK                                                │  │
 │  │                ▼                                                   │  │
-│  │  Step 2: Parse $ARGUMENTS (module name, provider, description)     │  │
+│  │          Run `go version` (Go >= 1.21 required)                    │  │
+│  │          Go missing or < 1.21? ──Yes──▶ STOP                       │  │
+│  │                │ OK                                                │  │
+│  │                ▼                                                   │  │
+│  │  Step 2: Parse $ARGUMENTS (resource name, provider)                │  │
 │  │          Incomplete? ──▶ AskUserQuestion                           │  │
 │  │                │                                                   │  │
 │  │                ▼                                                   │  │
-│  │  Step 3: Create GitHub issue                                       │  │
+│  │          Create GitHub issue                                       │  │
 │  │          - Read issue-body-template.md                             │  │
 │  │          - Fill placeholders                                       │  │
-│  │          - gh issue create → capture $ISSUE_NUMBER                 │  │
+│  │          - gh issue create                                         │  │
+│  │            --title "Provider Resource: {provider}_{service}_{resource}" │  │
+│  │          - Capture $ISSUE_NUMBER                                   │  │
 │  │          (issue body updated again after Step 6)                   │  │
 │  │                │                                                   │  │
 │  │                ▼                                                   │  │
-│  │  Step 4: create-new-feature.sh --json --issue $ISSUE_NUMBER        │  │
-│  │          --short-name "<module-name>" "<feature description>"       │  │
-│  │          → capture $BRANCH_NAME as $FEATURE and $DESIGN_FILE       │  │
+│  │  Step 4: create-new-feature.sh --json --workflow provider          │  │
+│  │          --issue $ISSUE_NUMBER --short-name "<resource-name>"      │  │
+│  │          Parse JSON → capture $BRANCH_NAME as $FEATURE             │  │
 │  │                │                                                   │  │
 │  │                ▼                                                   │  │
 │  │  Step 5: Scan requirements against tf-domain-category              │  │
+│  │          Focus on:                                                 │  │
+│  │          - API behavior ambiguity                                  │  │
+│  │          - State management decisions (ForceNew vs in-place)       │  │
+│  │          - Error handling patterns                                 │  │
 │  │                │                                                   │  │
 │  │                ▼                                                   │  │
-│  │  Step 6: AskUserQuestion (up to 4 questions)                       │  │
-│  │          MUST include security-defaults question                   │  │
+│  │  Step 6: AskUserQuestion (up to 5 questions)                       │  │
+│  │          MUST include:                                             │  │
+│  │          - Update behavior (ForceNew vs in-place update)           │  │
+│  │          - Test environment                                        │  │
+│  │          - Security questions                                      │  │
 │  │          ┌──────────────────────────────────┐                      │  │
 │  │          │ User answers clarifications      │                      │  │
 │  │          └──────────────┬───────────────────┘                      │  │
 │  │                         │                                          │  │
 │  │                         ▼                                          │  │
-│  │  Step 7: Launch 3-4 CONCURRENT tf-module-research agents                 │  │
-│  │          Wait for all to complete.                                  │  │
-│  │          Verify research files exist at                             │  │
-│  │          specs/{FEATURE}/research-*.md via Glob.                    │  │
+│  │  Step 7: Launch 3-4 CONCURRENT tf-provider-research agents         │  │
 │  │                                                                    │  │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ │  │
-│  │  │ tf-module-research │ │ tf-module-research │ │ tf-module-research │ │ tf-module-research │ │  │
-│  │  │  (Agent 1)   │ │  (Agent 2)   │ │  (Agent 3)   │ │  (Agent 4)   │ │  │
-│  │  │              │ │              │ │              │ │  optional    │ │  │
-│  │  │ Provider     │ │ AWS best     │ │ Registry     │ │ Edge         │ │  │
-│  │  │ docs         │ │ practices    │ │ patterns     │ │ cases        │ │  │
-│  │  │              │ │              │ │              │ │              │ │  │
-│  │  │ INPUT:       │ │ INPUT:       │ │ INPUT:       │ │ INPUT:       │ │  │
-│  │  │ 1 question   │ │ 1 question   │ │ 1 question   │ │ 1 question   │ │  │
-│  │  │              │ │              │ │              │ │              │ │  │
-│  │  │ MCP calls:   │ │ MCP calls:   │ │ MCP calls:   │ │ MCP calls:   │ │  │
-│  │  │ -get_provider│ │ -aws_search  │ │ -search      │ │ -aws_read    │ │  │
-│  │  │ -search_provs│ │ -aws_read    │ │  _modules    │ │ -get_provs   │ │  │
-│  │  │              │ │ -aws_recomm  │ │ -get_module  │ │              │ │  │
-│  │  │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:      │ │  │
-│  │  │ research-    │ │ research-    │ │ research-    │ │ research-    │ │  │
-│  │  │ {slug}.md    │ │ {slug}.md    │ │ {slug}.md    │ │ {slug}.md    │ │  │
-│  │  │ TO DISK      │ │ TO DISK      │ │ TO DISK      │ │ TO DISK      │ │  │
-│  │  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │  │
+│  │  │tf-provider-  │ │tf-provider-  │ │tf-provider-  │ │tf-provdr-│ │  │
+│  │  │research      │ │research      │ │research      │ │research  │ │  │
+│  │  │  (Agent 1)   │ │  (Agent 2)   │ │  (Agent 3)   │ │(Agent 4) │ │  │
+│  │  │              │ │              │ │              │ │ optional  │ │  │
+│  │  │ API/SDK      │ │ Plugin       │ │ Existing     │ │ Import/  │ │  │
+│  │  │ docs         │ │ Framework    │ │ provider     │ │ state    │ │  │
+│  │  │              │ │ patterns     │ │ impls        │ │ patterns │ │  │
+│  │  │              │ │              │ │              │ │          │ │  │
+│  │  │ INPUT:       │ │ INPUT:       │ │ INPUT:       │ │ INPUT:   │ │  │
+│  │  │ 1 question   │ │ 1 question   │ │ 1 question   │ │1 question│ │  │
+│  │  │              │ │              │ │              │ │          │ │  │
+│  │  │ MCP calls:   │ │ MCP calls:   │ │ MCP calls:   │ │MCP calls:│ │  │
+│  │  │ -WebSearch   │ │ -WebSearch   │ │ -WebSearch   │ │-WebSearch│ │  │
+│  │  │ -WebFetch    │ │ -WebFetch    │ │ -WebFetch    │ │-WebFetch │ │  │
+│  │  │  (API docs)  │ │  (framework  │ │  (provider   │ │ (import  │ │  │
+│  │  │              │ │   docs)      │ │   source)    │ │  specs)  │ │  │
+│  │  │              │ │              │ │              │ │          │ │  │
+│  │  │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:      │ │ OUTPUT:  │ │  │
+│  │  │ research-    │ │ research-    │ │ research-    │ │research- │ │  │
+│  │  │ {slug}.md    │ │ {slug}.md    │ │ {slug}.md    │ │{slug}.md │ │  │
+│  │  │ TO DISK      │ │ TO DISK      │ │ TO DISK      │ │TO DISK   │ │  │
+│  │  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └────┬─────┘ │  │
 │  │         │                │                │              │        │  │
 │  │         └────────────────┴────────┬───────┴──────────────┘        │  │
 │  │                                   │                               │  │
-│  │                    All findings written to disk as                  │  │
+│  │                    All findings written to disk as                 │  │
 │  │                    specs/{FEATURE}/research-{slug}.md              │  │
+│  │                    Verified via Glob                               │  │
 │  └───────────────────────────────────┬───────────────────────────────┘  │
 │                                      │                                  │
 │            Orchestrator holds:                                           │
 │            - Clarified requirements (from Step 6)                        │
 │            - $FEATURE path                                               │
+│            - Resource name + provider                                    │
 │            Research files on disk at specs/{FEATURE}/research-*.md       │
 │                                      │                                  │
 │                                      ▼                                  │
 │  PHASE 2: DESIGN                                                         │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
 │  │                                                                    │  │
-│  │  Step 8: Launch tf-module-design agent                                   │  │
+│  │  Step 8: Launch tf-provider-design agent                           │  │
 │  │  ┌──────────────────────────────────────────────────────────────┐  │  │
-│  │  │               tf-module-design (Agent)                              │  │  │
+│  │  │               tf-provider-design (Agent)                     │  │  │
 │  │  │                                                              │  │  │
 │  │  │  INPUT (via $ARGUMENTS):                                     │  │  │
 │  │  │  - FEATURE path                                              │  │  │
+│  │  │  - RESOURCE name                                             │  │  │
 │  │  │  - Clarified requirements                                    │  │  │
 │  │  │                                                              │  │  │
 │  │  │  READS ITSELF:                                               │  │  │
 │  │  │  - specs/{FEATURE}/research-*.md (research findings)         │  │  │
-│  │  │  - .foundations/memory/module-constitution.md                        │  │  │
-│  │  │  - .foundations/templates/module-design-template.md            │  │  │
+│  │  │  - .foundations/memory/provider-constitution.md               │  │  │
+│  │  │  - .foundations/templates/provider-design-template.md         │  │  │
 │  │  │                                                              │  │  │
 │  │  │  PRODUCES 7 SECTIONS:                                        │  │  │
 │  │  │  ┌────────────────────────────────────────────────────────┐  │  │  │
-│  │  │  │ § 1. Purpose & Requirements                            │  │  │  │
-│  │  │  │ § 2. Resources & Architecture (resource inventory)    │  │  │  │
-│  │  │  │ § 3. Interface Contract (variables + outputs)         │  │  │  │
-│  │  │  │ § 4. Security Controls (6 domains)                    │  │  │  │
-│  │  │  │ § 5. Test Scenarios (5 scenario groups)               │  │  │  │
-│  │  │  │ § 6. Implementation Checklist (4-8 items)             │  │  │  │
-│  │  │  │ § 7. Open Questions                                   │  │  │  │
+│  │  │  │ § 1. Purpose                                           │  │  │  │
+│  │  │  │ § 2. Schema & Attributes                               │  │  │  │
+│  │  │  │ § 3. CRUD Operations                                   │  │  │  │
+│  │  │  │ § 4. State Management & Import                         │  │  │  │
+│  │  │  │ § 5. Test Scenarios                                    │  │  │  │
+│  │  │  │ § 6. Implementation Checklist                          │  │  │  │
+│  │  │  │ § 7. Open Questions                                    │  │  │  │
 │  │  │  └────────────────────────────────────────────────────────┘  │  │  │
 │  │  │                                                              │  │  │
 │  │  │  VALIDATES before writing:                                   │  │  │
-│  │  │  - Every variable has Type + Description                     │  │  │
-│  │  │  - Every resource has Logical Name + Key Config              │  │  │
-│  │  │  - Every security control has CIS/WA reference               │  │  │
-│  │  │  - Security controls map to test assertions                  │  │  │
-│  │  │  - All 5 scenario groups present                             │  │  │
+│  │  │  - Every attribute has Type + Description                    │  │  │
+│  │  │  - CRUD operations defined (Create/Read/Update/Delete)       │  │  │
+│  │  │  - ForceNew vs in-place decisions documented per attribute   │  │  │
+│  │  │  - Import strategy specified                                 │  │  │
+│  │  │  - Test scenarios cover CRUD + import + error paths          │  │  │
 │  │  │  - Every scenario has >= 2 assertions                        │  │  │
-│  │  │  - Checklist has 4-8 items                                   │  │  │
+│  │  │  - Checklist items present                                   │  │  │
 │  │  │  - No cross-section line references                          │  │  │
-│  │  │  - Variable/resource names appear exactly once               │  │  │
 │  │  │                                                              │  │  │
-│  │  │  OUTPUT: specs/{FEATURE}/design.md                           │  │  │
+│  │  │  OUTPUT: specs/{FEATURE}/provider-design-{resource}.md       │  │  │
 │  │  └──────────────────────────────────────────────────────────────┘  │  │
 │  │                         │                                          │  │
 │  │                         ▼                                          │  │
-│  │  Step 9:  Glob — specs/{FEATURE}/design.md exists?                 │  │
-│  │           No? → Re-launch tf-module-design once                          │  │
+│  │  Step 9:  Glob — specs/{FEATURE}/provider-design-{resource}.md    │  │
+│  │           exists?                                                  │  │
+│  │           No? → Re-launch tf-provider-design once                  │  │
 │  │                         │ Yes                                      │  │
 │  │                         ▼                                          │  │
 │  │  Step 10: Grep — all 7 sections present?                           │  │
@@ -133,9 +150,8 @@ Mapping of the `tf-module-plan` orchestrator skill and its interaction with the 
 │  │                         ▼                                          │  │
 │  │  Step 11: AskUserQuestion — present design summary                 │  │
 │  │           ┌─────────────────────────────────────────────┐          │  │
-│  │           │ Summary: input/output counts, resource      │          │  │
-│  │           │ count, security controls, test scenarios,   │          │  │
-│  │           │ checklist items                             │          │  │
+│  │           │ Summary: attribute counts, CRUD operations, │          │  │
+│  │           │ test scenario counts, checklist items       │          │  │
 │  │           │                                             │          │  │
 │  │           │ Options:                                    │          │  │
 │  │           │   [Approve]  [Review file first]  [Changes] │          │  │
@@ -158,8 +174,8 @@ Mapping of the `tf-module-plan` orchestrator skill and its interaction with the 
 │                             │                                            │
 │                             ▼                                            │
 │  DONE                                                                    │
-│  Design approved at specs/{FEATURE}/design.md                            │
-│  Run /tf-module-implement $FEATURE to build.                                    │
+│  Design approved at specs/{FEATURE}/provider-design-{resource}.md        │
+│  Run /tf-provider-implement $FEATURE $RESOURCE to build.                           │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -169,77 +185,83 @@ Mapping of the `tf-module-plan` orchestrator skill and its interaction with the 
 User prompt
     │
     ▼
-tf-module-plan orchestrator
+tf-provider-plan orchestrator
     │
     ├──▶ Parse arguments + AskUserQuestion (clarifications)
     │         │
     │         ▼
     │    Clarified requirements ─────────────────────────────────┐
     │                                                            │
-    ├──▶ 3-4x tf-module-research agents (concurrent, write to disk)   │
+    ├──▶ 3-4x tf-provider-research agents (concurrent, write to disk)
     │    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-    │    │ Provider  │ │ AWS best │ │ Registry │ │ Edge     │   │
-    │    │ docs Q    │ │ practice │ │ patterns │ │ cases    │   │
+    │    │ API/SDK  │ │ Plugin   │ │ Existing │ │ Import/  │   │
+    │    │ docs Q   │ │Framework │ │ provider │ │ state    │   │
+    │    │          │ │ patterns │ │ impls    │ │ patterns │   │
     │    └─────┬────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘   │
     │          └───────────┴────────────┴─────────────┘         │
     │                      │                                     │
     │              Research files: specs/{FEATURE}/research-*.md │
     │                                                            │
     │                                                            ▼
-    ├──▶ tf-module-design agent ◀──── requirements + $FEATURE
+    ├──▶ tf-provider-design agent ◀──── requirements + $FEATURE + $RESOURCE
     │         │
     │         │  Also reads (itself):
     │         │  - specs/{FEATURE}/research-*.md
-    │         │  - module-constitution.md
-    │         │  - module-design-template.md
+    │         │  - provider-constitution.md
+    │         │  - provider-design-template.md
     │         │
     │         ▼
-    │    specs/{FEATURE}/design.md   ◀── SINGLE OUTPUT ARTIFACT
+    │    specs/{FEATURE}/provider-design-{resource}.md   ◀── SINGLE OUTPUT ARTIFACT
     │
     ├──▶ Orchestrator verifies (Glob + Grep, never reads content)
     │
     └──▶ User approval gate (AskUserQuestion)
               │
               ▼
-         /tf-module-implement picks up from here
+         /tf-provider-implement picks up from here
 ```
 
-## Handoff to tf-module-implement
+## Handoff to tf-provider-implement
 
 ```
-┌─────────────┐                              ┌──────────────┐
-│ tf-module-plan  │  produces                    │ tf-module-implement  │
-│ (Phases 1-2)│ ──────▶ design.md ──────▶    │ (Phases 3-4)  │
-│             │         (approved)           │               │
-└─────────────┘                              └──────────────┘
+┌─────────────────┐                                    ┌──────────────────┐
+│ tf-provider-plan │  produces                          │tf-provider-      │
+│ (Phases 1-2)    │ ──────▶ provider-design-    ──────▶│implement         │
+│                 │         {resource}.md               │(Phases 3-4)     │
+│                 │         (approved)                  │                  │
+└─────────────────┘                                    └──────────────────┘
 
 The ONLY artifact passed between the two skills is:
-    specs/{FEATURE}/design.md
+    specs/{FEATURE}/provider-design-{resource}.md
 
-Research artifacts (specs/{FEATURE}/research-*.md) persist on disk but are consumed only by the design agent.
+Research artifacts (specs/{FEATURE}/research-*.md) persist on disk
+but are consumed only by the design agent.
 ```
 
 ## Analysis: Does the Flow Make Sense?
 
-**Yes, the flow is well-structured.** It faithfully implements AGENTS.md principles P1, P3, P4, P6, and P8.
+**Yes, the flow is well-structured.** It faithfully adapts the module planning pattern for provider development while adding provider-specific gates and concerns.
 
 ### What's Right
 
-1. **Single design artifact (P1)**: The planning phase produces one design file: `specs/{FEATURE}/design.md`. Research files (`specs/{FEATURE}/research-*.md`) are intermediate artifacts consumed by the design agent.
+1. **Go version gate (Step 1)**: Provider development requires Go, and the dual gate (validate-env.sh + explicit `go version` check) catches environment issues before any work begins. This is provider-specific and not present in the module flow.
 
-2. **Research persisted to disk (P4)**: The tf-module-research agents write findings to `specs/{FEATURE}/research-{slug}.md`. The design agent reads these files directly — the orchestrator only verifies they exist via Glob and passes the FEATURE path.
+2. **Single design artifact (P1)**: The planning phase produces one design file: `specs/{FEATURE}/provider-design-{resource}.md`. Research files (`specs/{FEATURE}/research-*.md`) are intermediate artifacts consumed by the design agent.
 
-3. **Security embedded in design (P3)**: Security is woven through at three points:
-   - Step 5: Ambiguity scan flags security-configurable features
-   - Step 6: Mandatory security-defaults clarification question
-   - tf-module-design agent: Mandatory Section 4 (Security Controls) with CIS/WA references, plus security assertions required in Section 5 tests
+3. **Research persisted to disk (P4)**: The tf-provider-research agents write findings to `specs/{FEATURE}/research-{slug}.md`. The design agent reads these files directly -- the orchestrator only verifies they exist via Glob and passes the FEATURE path.
 
-4. **Orchestrator directs, doesn't accumulate (P6)**: The orchestrator passes short context (requirements, file paths) to agents. It verifies research and design files exist via Glob and checks section presence via Grep. It never reads the full content itself.
+4. **Provider-specific research focus**: The four research lanes (API/SDK docs, Plugin Framework patterns, existing implementations, import/state patterns) target the exact knowledge a provider resource author needs. This contrasts with the module flow's research lanes (provider docs, AWS best practices, registry patterns, edge cases).
 
-5. **Phase order is fixed (P8)**: Understand must complete before Design starts. Research agents must all return before tf-module-design launches. User must approve before /tf-module-implement can run.
+5. **State management decisions front-loaded**: The mandatory clarification question on ForceNew vs in-place update behavior (Step 6) and the ambiguity scan focus on state management (Step 5) ensure these critical provider decisions are resolved before design begins. ForceNew/in-place mistakes are expensive to fix post-implementation.
 
-6. **Agents have one job (P5)**: Each tf-module-research agent answers exactly ONE question. The tf-module-design agent takes requirements + findings and produces exactly ONE file.
+6. **Orchestrator directs, doesn't accumulate (P6)**: The orchestrator passes short context (requirements, file paths, resource name) to agents. It verifies research and design files exist via Glob and checks section presence via Grep. It never reads the full content itself.
 
-### One Thing to Watch
+7. **Agents have one job (P5)**: Each tf-provider-research agent answers exactly ONE question. The tf-provider-design agent takes requirements + findings and produces exactly ONE file.
 
-The GitHub issue is created at Step 3 (before clarification) and updated after Step 6 (after clarification). This means there's a window where the issue exists with incomplete information. This is intentional — the issue serves as a tracking anchor from the start — but if the workflow fails between Steps 3 and 6, there's an orphaned issue with placeholder content. Not a design flaw, just an operational edge case worth being aware of.
+### Things to Watch
+
+1. **Step 3 is skipped in numbering**: The SKILL.md source goes 1, 2, 4, 5, 6, 7 -- there is no Step 3. This appears intentional (possibly a removed step) but could cause confusion when referencing step numbers in logs or error messages.
+
+2. **GitHub issue created before clarification**: Same pattern as the module flow -- the issue is created at Step 2 and updated after Step 6. If the workflow fails between Steps 2 and 6, an orphaned issue with placeholder content exists. Operational edge case, not a design flaw.
+
+3. **5 clarification questions vs module's 4**: The provider flow allows up to 5 questions (vs the module flow's 4). The extra question budget reflects the additional complexity of provider development (API behavior, state management, error handling) but increases user friction. Worth monitoring whether all 5 are typically needed.

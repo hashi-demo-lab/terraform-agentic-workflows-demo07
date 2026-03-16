@@ -135,7 +135,8 @@ Mapping of the `tf-provider-implement` orchestrator skill and its interaction wi
 │  └────────────────────────────────────────────────────────────────────┘ │
 │                       │                                                 │
 │                       ▼                                                 │
-│  DONE: Report test pass/fail, validation status, PR link                │
+│  DONE: Report build pass/fail, test compilation, acceptance test        │
+│        results (if run), validation status, PR link                     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
