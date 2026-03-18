@@ -18,7 +18,8 @@
         "The table row count matches the actual number of task results (1 task)",
         "Outcomes are shown: Estimation (Passed), Policy (Failed), and Recommendation (Passed)",
         "The JSON artifact was saved to a file and contains valid run task data",
-        "The output includes actionable detail from outcome bodies — such as policy violations, failing resources, or cost recommendations"
+        "The output includes actionable detail from outcome bodies — such as policy violations, failing resources, or cost recommendations",
+        "Run metadata from MCP get_run_details is included — such as run status, trigger source, or whether the run has been applied"
       ]
     },
     {
@@ -32,7 +33,8 @@
         "The output shows task results in a structured format with columns for Task Name, Status, and Enforcement",
         "The Apptio-Cloudability task and its failed/advisory status are displayed",
         "The cost information from the message field is presented",
-        "Outcomes for the task result are shown with their status tags"
+        "Outcomes for the task result are shown with their status tags",
+        "Run metadata from MCP get_run_details is included — such as run status, trigger source, or whether the run has been applied"
       ]
     },
     {
@@ -60,7 +62,8 @@
         "If task_stages is non-empty, the output shows the stage name and status",
         "The summary counts (total_tasks, passed, failed) are shown in the user-facing response text, not just in the raw JSON",
         "No errors or crashes occurred during execution",
-        "The output distinguishes between 'no task stages' and 'task stages exist but have zero results'"
+        "The output distinguishes between 'no task stages' and 'task stages exist but have zero results'",
+        "Run metadata from MCP get_run_details is included to provide lifecycle context for the run"
       ]
     }
   ]

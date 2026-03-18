@@ -62,7 +62,8 @@
         "If task_stages is non-empty, the output shows the stage name and status",
         "The summary counts (total_tasks, passed, failed) are shown in the user-facing response text, not just in the raw JSON",
         "No errors or crashes occurred during execution",
-        "The output distinguishes between 'no task stages' and 'task stages exist but have zero results'"
+        "The output distinguishes between 'no task stages' and 'task stages exist but have zero results'",
+        "Run metadata from MCP get_run_details is included to provide lifecycle context for the run"
       ]
     }
   ]
