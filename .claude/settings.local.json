@@ -89,7 +89,7 @@
     "terraform",
     "aws-knowledge-mcp-server"
   ],
-  "disableAllHooks": true,
+  "disableAllHooks": false,
   "statusLine": {
     "type": "command",
     "command": "bash /workspace/.claude/claude-statusline.sh"
