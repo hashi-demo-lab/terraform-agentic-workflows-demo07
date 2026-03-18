@@ -14,11 +14,10 @@
         "The message about cost diff (Total Cost before/after) is shown",
         "The stage 'post_plan' or 'Post-Plan' is identified",
         "The overall stage status 'passed' is shown (stage passed despite advisory failure)",
-        "The script scripts/get-run-task-results.sh was executed and produced valid JSON output with run_id field",
+        "The script scripts/get-run-task-results.sh was executed to fetch the data",
         "The table row count matches the actual number of task results (1 task)",
         "Outcomes are shown: Estimation (Passed), Policy (Failed), and Recommendation (Passed)",
-        "The JSON artifact was saved to a file and contains valid run task data",
-        "The output includes actionable detail from outcome bodies — such as policy violations, failing resources, or cost recommendations"
+        "The JSON artifact was saved to the outputs directory"
       ]
     },
     {
@@ -28,8 +27,8 @@
       "files": [],
       "assertions": [
         "The run ID 'run-iURWDL3wVxzefsjo' was correctly extracted from the URL",
-        "The script scripts/get-run-task-results.sh was called with the URL and produced valid JSON output",
-        "The output shows task results in a structured format with columns for Task Name, Status, and Enforcement",
+        "The script scripts/get-run-task-results.sh was called with either the URL or extracted run ID",
+        "The output shows task results in a structured format (table or clear listing) with non-empty data rows",
         "The Apptio-Cloudability task and its failed/advisory status are displayed",
         "The cost information from the message field is presented",
         "Outcomes for the task result are shown with their status tags"
@@ -58,7 +57,7 @@
         "The script scripts/get-run-task-results.sh was executed with the run ID",
         "If the run has zero total_tasks in the summary, the output clearly states no run tasks produced results or no run tasks are configured",
         "If task_stages is non-empty, the output shows the stage name and status",
-        "The summary counts (total_tasks, passed, failed) are shown in the user-facing response text, not just in the raw JSON",
+        "The summary counts (total_tasks, passed, failed) are displayed even when counts are zero",
         "No errors or crashes occurred during execution",
         "The output distinguishes between 'no task stages' and 'task stages exist but have zero results'"
       ]

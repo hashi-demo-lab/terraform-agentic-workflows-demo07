@@ -1,0 +1,124 @@
+{
+  "expectations": [
+    {
+      "text": "The output includes a markdown table with run task results",
+      "passed": true,
+      "evidence": "Transcript Final Result shows a markdown table: '| Task Name | Status | Enforcement | Message |' with proper headers and a data row for Apptio-Cloudability."
+    },
+    {
+      "text": "The task name 'Apptio-Cloudability' appears in the output",
+      "passed": true,
+      "evidence": "Transcript line 52: '| Apptio-Cloudability | failed | advisory | Total Cost before: 31.54, after: 31.64, diff: +0.10 |'. Also present in run-task-results.json at task_name field."
+    },
+    {
+      "text": "The status 'failed' is shown for the task result",
+      "passed": true,
+      "evidence": "Transcript line 52: '| Apptio-Cloudability | failed | advisory |'. Also in JSON: '\"status\": \"failed\"'."
+    },
+    {
+      "text": "The enforcement level 'advisory' is indicated",
+      "passed": true,
+      "evidence": "Transcript line 52: '| Apptio-Cloudability | failed | advisory |'. Also in JSON: '\"enforcement_level\": \"advisory\"'."
+    },
+    {
+      "text": "The message about cost diff (Total Cost before/after) is shown",
+      "passed": true,
+      "evidence": "Transcript line 52: 'Total Cost before: 31.54, after: 31.64, diff: +0.10'. Also in JSON: '\"message\": \"Total Cost before: 31.54, after: 31.64, diff: +0.10\"'."
+    },
+    {
+      "text": "The stage 'post_plan' or 'Post-Plan' is identified",
+      "passed": true,
+      "evidence": "Transcript line 48: '#### Post-Plan Tasks (stage status: passed)'. Also in JSON: '\"stage\": \"post_plan\"'."
+    },
+    {
+      "text": "The overall stage status 'passed' is shown (stage passed despite advisory failure)",
+      "passed": true,
+      "evidence": "Transcript line 48: '#### Post-Plan Tasks (stage status: passed)' and line 103: 'The stage status is **passed** despite the task result being **failed** because the enforcement level is **advisory**'. JSON confirms: '\"status\": \"passed\"' on the task_stages object."
+    },
+    {
+      "text": "The script scripts/get-run-task-results.sh was executed to fetch the data",
+      "passed": true,
+      "evidence": "Transcript Step 3: 'Run the script with the run ID run-iURWDL3wVxzefsjo. Tool: Bash `bash scripts/get-run-task-results.sh run-iURWDL3wVxzefsjo`'. Result: Success."
+    },
+    {
+      "text": "The table row count matches the actual number of task results (1 task)",
+      "passed": true,
+      "evidence": "The main results table has exactly 1 data row (Apptio-Cloudability), matching the JSON which contains 1 task result. Transcript line 46 confirms: 'Total tasks: 1'."
+    },
+    {
+      "text": "Outcomes are shown: Estimation (Passed), Policy (Failed), and Recommendation (Passed)",
+      "passed": true,
+      "evidence": "Transcript lines 58-60 show the outcomes table: 'Estimation | Cost Estimation Result | Passed | --', 'Policy | Policy Evaluation Result | Failed | Gated', 'Recommendation | Recommendation Result | Passed | --'. All three outcomes present with correct statuses."
+    },
+    {
+      "text": "The JSON artifact was saved to the outputs directory",
+      "passed": true,
+      "evidence": "File exists at outputs/run-task-results.json (confirmed via Glob). Contains 121 lines of valid JSON with run_id, task_stages, task_results, outcomes, and summary fields."
+    }
+  ],
+  "summary": {
+    "passed": 11,
+    "failed": 0,
+    "total": 11,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 3,
+      "Write": 3,
+      "Bash": 3,
+      "Edit": 0,
+      "Glob": 0,
+      "Grep": 0
+    },
+    "total_tool_calls": 9,
+    "total_steps": 5,
+    "errors_encountered": 0,
+    "output_chars": 14481,
+    "transcript_chars": 3804
+  },
+  "claims": [
+    {
+      "claim": "The script returned a JSON object with 1 task stage (post_plan), 1 task result, and 3 outcomes",
+      "type": "factual",
+      "verified": true,
+      "evidence": "run-task-results.json confirms: 1 entry in task_stages array with stage 'post_plan', 1 entry in task_results array, and 3 entries in outcomes array (Estimation, Policy, Recommendation)."
+    },
+    {
+      "claim": "Stage passed despite advisory failure",
+      "type": "factual",
+      "verified": true,
+      "evidence": "JSON shows task_stages[0].status='passed' while task_results[0].status='failed' with enforcement_level='advisory'. The explanation is correct."
+    },
+    {
+      "claim": "Monthly Cost Impact: +0.10 USD",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The Estimation outcome's body_html in the JSON contains 'Monthly Cost Impact: +0.10 USD' and the cost table confirms TOTAL went from 31.54 to 31.64."
+    },
+    {
+      "claim": "23 Failing Resources for policy violations",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The Policy outcome's body_html in JSON contains '23 Failing Resources' heading, and lists 23 resource detail sections, primarily for missing cost-center tags."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The script scripts/get-run-task-results.sh was executed to fetch the data",
+        "reason": "This checks process rather than outcome. Since the transcript is self-reported, a simulated transcript could claim the script ran without it actually executing. Checking for specific API-derived data in the JSON output (like the task result ID 'taskrs-DD9wxDDeiVp8UTLs') would be harder to fake."
+      },
+      {
+        "assertion": "The JSON artifact was saved to the outputs directory",
+        "reason": "This assertion passes if a file named run-task-results.json exists with any content. The eval already implicitly validates content through other assertions, but an explicit content-structure assertion (e.g., 'JSON contains task_stages array with outcomes') would be more discriminating."
+      }
+    ],
+    "overall": "Assertions provide good coverage of the key outputs: task name, status, enforcement, cost message, stage, outcomes, and artifact persistence. The two suggestions above are minor refinements rather than critical gaps."
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "expectations": [
+    {
+      "text": "The script was executed with the invalid run ID run-NONEXISTENT12345",
+      "passed": true,
+      "evidence": "Transcript Step 2 shows: 'Executed the skill script `scripts/get-run-task-results.sh run-NONEXISTENT12345`' with Tool: 'bash scripts/get-run-task-results.sh run-NONEXISTENT12345'."
+    },
+    {
+      "text": "The output clearly communicates that the run was not found or an error occurred",
+      "passed": true,
+      "evidence": "Transcript Step 2 Result states: 'The TFC/TFE API returned HTTP 404 with the response body: {\"errors\":[{\"status\":\"404\",\"title\":\"not found\"}]}'. The error message reads: 'Error: API returned HTTP 404 for /runs/run-NONEXISTENT12345/task-stages'. The Final Result section explicitly states: 'The run ID run-NONEXISTENT12345 does not exist.'"
+    },
+    {
+      "text": "The error message includes the specific run ID 'run-NONEXISTENT12345'",
+      "passed": true,
+      "evidence": "The error message in Step 2 includes the run ID: 'Error: API returned HTTP 404 for /runs/run-NONEXISTENT12345/task-stages?include=task_results&page%5Bnumber%5D=1&page%5Bsize%5D=100 (run: run-NONEXISTENT12345)'. The Final Result also names the run ID explicitly."
+    },
+    {
+      "text": "The error does not crash silently — it provides actionable feedback",
+      "passed": true,
+      "evidence": "The Final Result provides actionable guidance: 'This means either: The run ID is incorrect or does not exist in the organization. The API token (TFE_TOKEN) does not have access to the workspace containing this run.' It then advises: 'Please verify the run ID and try again with a valid run ID.'"
+    },
+    {
+      "text": "No fabricated task results are shown",
+      "passed": true,
+      "evidence": "The output file run-task-results.json contains only the raw API error response: '{\"errors\":[{\"status\":\"404\",\"title\":\"not found\"}]}'. Transcript Step 3 confirms: 'No structured JSON output was produced, so no summary/stage/outcome tables could be rendered.' No fake tables, stages, or task results appear anywhere."
+    },
+    {
+      "text": "The script exits with a non-zero exit code (the error is propagated, not swallowed)",
+      "passed": true,
+      "evidence": "Transcript Step 2 explicitly states: 'The script exited with code 1.' The Issues section reiterates: 'The script exited with code 1 (non-zero), as expected for an invalid run ID.'"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 2,
+      "Write": 4,
+      "Bash": 3,
+      "Edit": 0,
+      "Glob": 0,
+      "Grep": 0
+    },
+    "total_tool_calls": 9,
+    "total_steps": 3,
+    "errors_encountered": 1,
+    "output_chars": 503,
+    "transcript_chars": 2460
+  },
+  "claims": [
+    {
+      "claim": "The TFC/TFE API returned HTTP 404",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The raw output file run-task-results.json contains the 404 error response: {\"errors\":[{\"status\":\"404\",\"title\":\"not found\"}]}"
+    },
+    {
+      "claim": "The script exited with code 1",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transcript Step 2 states 'The script exited with code 1' and the Issues section confirms this. The metrics.json also shows errors_encountered: 1."
+    },
+    {
+      "claim": "No structured JSON output was produced",
+      "type": "factual",
+      "verified": true,
+      "evidence": "run-task-results.json contains only the API error payload, not task result data."
+    },
+    {
+      "claim": "The 404 could mean the run ID doesn't exist OR the TFE_TOKEN lacks access",
+      "type": "factual",
+      "verified": true,
+      "evidence": "This is a known behavior of the TFC/TFE API — it returns 404 for both nonexistent resources and resources the token cannot access, without distinguishing the two cases."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "The 404 could mean the run ID doesn't exist OR the TFE_TOKEN lacks access — the API does not distinguish between these cases."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The script exits with a non-zero exit code (the error is propagated, not swallowed)",
+        "reason": "This is verified only from the transcript's narrative, not from a direct observation of the exit code. A stronger eval would capture the actual exit code in a separate output file (e.g., by wrapping the script call with `; echo $?` and saving it). As written, the assertion depends on the executor honestly reporting the exit code."
+      },
+      {
+        "reason": "No assertion checks the content of run-task-results.json to confirm it contains an error response rather than fabricated data. Assertion 5 ('No fabricated task results') is close but could be strengthened by explicitly requiring the output file to contain the 404 error payload."
+      }
+    ],
+    "overall": "Assertions cover the error-handling path well. The main gap is that several assertions rely on the transcript narrative rather than directly inspecting output artifacts, which could allow a chatty executor to pass without the script actually behaving correctly."
+  }
+}

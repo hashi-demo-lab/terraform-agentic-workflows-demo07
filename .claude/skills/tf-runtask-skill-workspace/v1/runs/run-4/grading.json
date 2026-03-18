@@ -1,0 +1,91 @@
+{
+  "expectations": [
+    {
+      "text": "The script scripts/get-run-task-results.sh was executed with the run ID",
+      "passed": true,
+      "evidence": "Transcript Step 3: 'Ran the script with run ID run-hGthAq8Kuv5wcKZq' using Bash tool 'scripts/get-run-task-results.sh run-hGthAq8Kuv5wcKZq'. The output file run-task-results.json confirms the run_id field is 'run-hGthAq8Kuv5wcKZq'."
+    },
+    {
+      "text": "If the run has zero total_tasks in the summary, the output clearly states no run tasks produced results or no run tasks are configured",
+      "passed": true,
+      "evidence": "The JSON output shows total_tasks: 0. The transcript's Final Result states: 'This run has task stages but no task results were produced' and 'no external run task integrations produced results for this run.' This clearly communicates that no run tasks produced results."
+    },
+    {
+      "text": "If task_stages is non-empty, the output shows the stage name and status",
+      "passed": true,
+      "evidence": "task_stages contains one entry (post_plan, passed). The Final Result section lists: 'Post-Plan (stage id: ts-typfk8e6VteKbnXG) — status: passed'. Both the stage name and status are displayed."
+    },
+    {
+      "text": "The summary counts (total_tasks, passed, failed) are displayed even when counts are zero",
+      "passed": true,
+      "evidence": "The run-task-results.json output file includes the full summary block with total_tasks: 0, passed: 0, failed: 0, errored: 0, pending: 0, unreachable: 0. The transcript Step 3 also references 'total_tasks: 0'. All counts are present even at zero."
+    },
+    {
+      "text": "No errors or crashes occurred during execution",
+      "passed": true,
+      "evidence": "Transcript Issues section states 'None. The script executed successfully and the edge case was handled per skill instructions.' metrics.json shows errors_encountered: 0."
+    },
+    {
+      "text": "The output distinguishes between 'no task stages' and 'task stages exist but have zero results'",
+      "passed": true,
+      "evidence": "The transcript explicitly identifies this as 'edge case #2: task stages exist but contain zero task results' and distinguishes it from edge case #1 (no run tasks configured). The Final Result says 'This run has task stages but no task results were produced' and explains 'the run task infrastructure exists on this workspace, but no external run task integrations produced results for this run.' This clearly differentiates from a scenario where no task stages exist at all."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 3,
+      "Write": 4,
+      "Bash": 3,
+      "Edit": 0,
+      "Glob": 1,
+      "Grep": 0,
+      "ToolSearch": 1,
+      "mcp__terraform__get_run_details": 1
+    },
+    "total_tool_calls": 13,
+    "total_steps": 6,
+    "errors_encountered": 0,
+    "output_chars": 861,
+    "transcript_chars": 3432
+  },
+  "claims": [
+    {
+      "claim": "The run has status 'applied' and was triggered via CLI using Terraform v1.14.6",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript Step 5 reports this from mcp__terraform__get_run_details. Consistent with the run context but cannot independently verify beyond the MCP call result."
+    },
+    {
+      "claim": "The post-plan task stage was created at 2026-03-11T04:20:17Z and passed at 2026-03-11T04:21:02Z",
+      "type": "factual",
+      "verified": true,
+      "evidence": "run-task-results.json confirms created_at: '2026-03-11T04:20:17.069Z' and status_timestamps.passed-at: '2026-03-11T04:21:02+00:00'."
+    },
+    {
+      "claim": "This matches edge case #2 from the skill instructions",
+      "type": "process",
+      "verified": true,
+      "evidence": "The JSON shows task_stages is non-empty (1 entry) with task_results: [] — this is exactly the pattern of 'task stages exist but contain zero task results'."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The summary counts (total_tasks, passed, failed) are displayed even when counts are zero",
+        "reason": "This assertion is satisfied by the JSON output file containing the counts, but does not verify whether the user-facing response also explicitly presented numeric counts. The transcript's Final Result mentions zero task results narratively but does not show the summary table with numbers. Consider clarifying whether 'displayed' means in the raw JSON or in the human-readable response."
+      }
+    ],
+    "overall": "Assertions are well-targeted for this edge case. The distinction test (expectation 6) is the most discriminating assertion and was handled well. One minor ambiguity around whether 'displayed' means raw JSON vs. user-facing prose."
+  }
+}

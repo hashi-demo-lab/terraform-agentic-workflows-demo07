@@ -1,0 +1,95 @@
+{
+  "expectations": [
+    {
+      "text": "The script scripts/get-run-task-results.sh was executed with the run ID",
+      "passed": true,
+      "evidence": "Transcript Step 3 shows: 'Bash - `bash scripts/get-run-task-results.sh run-hGthAq8Kuv5wcKZq`' with exit code 0. The output JSON confirms run_id 'run-hGthAq8Kuv5wcKZq'."
+    },
+    {
+      "text": "If the run has zero total_tasks in the summary, the output clearly states no run tasks produced results or no run tasks are configured",
+      "passed": true,
+      "evidence": "The JSON summary shows total_tasks: 0. The Final Result section states: 'This run (run-hGthAq8Kuv5wcKZq) has task stages but no task results were produced' and 'no individual run task results were recorded within it.' Total tasks: 0 is explicitly shown."
+    },
+    {
+      "text": "If task_stages is non-empty, the output shows the stage name and status",
+      "passed": true,
+      "evidence": "The JSON contains one task stage (post_plan, passed). The Final Result section lists: '- **post_plan** (status: passed)'. Both the stage name and status are clearly shown."
+    },
+    {
+      "text": "The summary counts (total_tasks, passed, failed) are shown in the user-facing response text, not just in the raw JSON",
+      "passed": true,
+      "evidence": "The Final Result section includes the line: '**Total tasks**: 0 | Passed: 0 | Failed: 0 | Errored: 0'. These counts appear in the user-facing transcript text, not only in the raw JSON file."
+    },
+    {
+      "text": "No errors or crashes occurred during execution",
+      "passed": true,
+      "evidence": "Transcript Issues section states 'None. The script executed successfully and returned valid JSON.' metrics.json shows errors_encountered: 0. Script returned exit code 0."
+    },
+    {
+      "text": "The output distinguishes between 'no task stages' and 'task stages exist but have zero results'",
+      "passed": true,
+      "evidence": "The transcript explicitly identifies this as 'edge case #2 from SKILL.md: Task stages exist but contain zero task results.' The Final Result explains: 'The task stage infrastructure exists (the post_plan stage ran and passed), but no individual run task results were recorded within it.' This clearly distinguishes it from a scenario where no task stages exist at all."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 3,
+      "Write": 4,
+      "Bash": 3,
+      "Edit": 0,
+      "Glob": 0,
+      "Grep": 0
+    },
+    "total_tool_calls": 10,
+    "total_steps": 5,
+    "errors_encountered": 0,
+    "output_chars": 1069,
+    "transcript_chars": 3032
+  },
+  "timing": {},
+  "claims": [
+    {
+      "claim": "Script returned exit code 0",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transcript Step 3: 'Script returned successfully (exit code 0)' and errors_encountered: 0 in metrics.json"
+    },
+    {
+      "claim": "Result matches edge case #2 from SKILL.md",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The JSON output shows task_stages with one entry (post_plan) but task_results is an empty array, and total_tasks is 0. This matches the described edge case of stages existing with zero results."
+    },
+    {
+      "claim": "Run tasks were previously configured but have since been removed, or the integration did not produce results",
+      "type": "quality",
+      "verified": false,
+      "evidence": "This is speculative reasoning about why the stage exists with no results. Cannot be verified from the available data, but was appropriately presented as a possibility rather than a fact."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "The reason why the post_plan stage exists but contains zero task results is unclear"
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The script scripts/get-run-task-results.sh was executed with the run ID",
+        "reason": "This only checks that the script was invoked. It would also pass if the script was called but returned invalid/empty output. Consider verifying the script produced valid JSON with the correct run_id field."
+      },
+      {
+        "reason": "No assertion checks that the raw JSON was saved to an output file. The executor saved run-task-results.json, but nothing validates this artifact exists or is well-formed."
+      }
+    ],
+    "overall": "Assertions are well-targeted for this edge case scenario. The distinction test (expectation 6) is particularly good — it forces the skill to handle a subtle case correctly. Minor gaps around validating the saved JSON artifact."
+  }
+}

@@ -14,7 +14,7 @@ chmod 700 /home/node/.claude
 
 # Configure Claude statusline in user settings
 CLAUDE_SETTINGS="/home/node/.claude/settings.json"
-STATUSLINE_CONFIG='{"statusLine":{"type":"command","command":"/usr/local/bin/claude-statusline.sh","padding":0}}'
+STATUSLINE_CONFIG='{"model":"opus[1m]","statusLine":{"type":"command","command":"/usr/local/bin/claude-statusline.sh","padding":0}}'
 if [ -f "$CLAUDE_SETTINGS" ] && [ -s "$CLAUDE_SETTINGS" ]; then
     # Merge statusLine into existing settings
     tmp=$(jq --argjson sl "$STATUSLINE_CONFIG" '. * $sl' "$CLAUDE_SETTINGS")

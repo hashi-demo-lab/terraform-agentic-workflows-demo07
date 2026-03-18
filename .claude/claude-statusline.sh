@@ -216,11 +216,14 @@ CTX_TOTAL=$(echo "$input" | jq -r '
   (.context_window.context_window_size // 0)
 ')
 
-# Format tokens: 1500 → "1.5k", 200000 → "200k"
+# Format tokens: 1500 → "1.5k", 200000 → "200k", 1000000 → "1M"
 fmt_tokens() {
   local n=$1
   if [ "$n" -ge 1000000 ] 2>/dev/null; then
-    printf '%.1fM' "$(awk "BEGIN{printf \"%.1f\", $n / 1000000}")"
+    local m_int=$(( n / 1000000 ))
+    local m_frac=$(( (n % 1000000) / 100000 ))
+    if [ "$m_frac" -gt 0 ]; then printf '%s.%sM' "$m_int" "$m_frac"
+    else printf '%sM' "$m_int"; fi
   elif [ "$n" -ge 1000 ] 2>/dev/null; then
     local k=$(( n / 1000 ))
     local r=$(( (n % 1000) / 100 ))
@@ -241,7 +244,7 @@ fmt_tokens() {
 CTX_USED_FMT=$(fmt_tokens "$CTX_USED")
 CTX_TOTAL_FMT=$(fmt_tokens "$CTX_TOTAL")
 
-# Build context display: "58% 45k/200k" or just "58%" if no token data
+# Build context display: "58% 580k/1M" or just "58%" if no token data
 if [ -n "$CTX_USED_FMT" ] && [ -n "$CTX_TOTAL_FMT" ]; then
   CTX_TOKENS="${CTX_USED_FMT}/${CTX_TOTAL_FMT}"
 else

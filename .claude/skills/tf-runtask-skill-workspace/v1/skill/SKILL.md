@@ -39,7 +39,7 @@ The script uses `include=task_results` sideloading for efficiency (one API call 
 
 Parse the JSON and present a markdown summary. The presentation has three tiers that mirror the data hierarchy:
 
-**Tier 1 — Summary line** with aggregate counts from `summary`. Always include these counts in the user-facing response (not just in the raw JSON), even when all counts are zero:
+**Tier 1 — Summary line** with aggregate counts from `summary`:
 ```
 **Total tasks**: 1 | Passed: 0 | Failed: 1 | Errored: 0
 ```
@@ -73,15 +73,6 @@ If an outcome has `body_html` content, render it in a collapsible block:
 
 </details>
 ```
-
-**Tier 4 — Actionable insights** after presenting the tables, synthesize the most important findings from the outcome bodies. The `body_html` content often contains the richest detail — specific failing resources, tag violations, cost savings recommendations, or compliance issues. Summarize these findings in plain language so the user doesn't have to parse raw HTML. For example:
-
-> **Key findings:**
-> - **Policy**: 23 resources failing — 22 missing `cost-center` tag (advisory), 1 EC2 instance using `t3.small` instead of required `t2.small` (gated)
-> - **Cost**: Monthly impact +$0.10 USD, driven by a new CloudWatch metric alarm
-> - **Recommendation**: Switch EC2 from `t3.small` to `t4g.small` for ~20% cost savings
-
-This synthesis is what makes the skill output more valuable than just showing raw tables — it highlights what the user needs to act on.
 
 ### Handling edge cases
 

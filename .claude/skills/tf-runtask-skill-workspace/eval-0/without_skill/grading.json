@@ -1,0 +1,138 @@
+{
+  "expectations": [
+    {
+      "text": "The output includes a markdown table with run task results",
+      "passed": false,
+      "evidence": "The transcript contains a markdown table but it only shows the task stage ID, stage type, timing, and inferred outcome. It does NOT show actual run task results (task name, status, enforcement level, message). The table is about the task stage metadata, not task results."
+    },
+    {
+      "text": "The task name 'Apptio-Cloudability' appears in the output",
+      "passed": false,
+      "evidence": "The name 'Apptio-Cloudability' does not appear anywhere in the transcript or outputs. The executor acknowledged it could not retrieve individual task names: 'Without a dedicated task stage API call, the individual task names and results are unknown.'"
+    },
+    {
+      "text": "The status 'failed' is shown for the task result",
+      "passed": false,
+      "evidence": "No task-level 'failed' status appears. The executor inferred the overall outcome as 'Passed' based on the run reaching 'applied' status, which is the opposite conclusion."
+    },
+    {
+      "text": "The enforcement level 'advisory' is indicated",
+      "passed": false,
+      "evidence": "No enforcement level information appears in the transcript or outputs. The executor explicitly noted: 'The actual task results (pass/fail, advisory/mandatory, external URL) are not accessible.'"
+    },
+    {
+      "text": "The message about cost diff (Total Cost before/after) is shown",
+      "passed": false,
+      "evidence": "No cost diff information appears anywhere in the transcript or outputs."
+    },
+    {
+      "text": "The stage 'post_plan' or 'Post-Plan' is identified",
+      "passed": true,
+      "evidence": "The transcript table shows 'Stage Type | Post-plan' and the status timestamps reference 'post-plan-running-at' and 'post-plan-completed-at'."
+    },
+    {
+      "text": "The overall stage status 'passed' is shown (stage passed despite advisory failure)",
+      "passed": false,
+      "evidence": "While the executor inferred 'Passed' as the outcome, it did so for the wrong reason — it assumed tasks passed because the run proceeded to apply, rather than understanding that the stage passed despite an advisory task failure. The nuance of 'stage passed despite advisory failure' is completely absent."
+    },
+    {
+      "text": "The script scripts/get-run-task-results.sh was executed to fetch the data",
+      "passed": false,
+      "evidence": "No such script was executed. The executor used only the mcp__terraform__get_run_details MCP tool and ToolSearch. No bash script for fetching run task results was run."
+    },
+    {
+      "text": "The table row count matches the actual number of task results (1 task)",
+      "passed": false,
+      "evidence": "The table has one row but it represents the task stage, not the individual task result. The executor could not retrieve individual task results at all."
+    },
+    {
+      "text": "Outcomes are shown: Estimation (Passed), Policy (Failed), and Recommendation (Passed)",
+      "passed": false,
+      "evidence": "No such outcome categories appear in the transcript or outputs. The executor had no visibility into individual task outcomes."
+    },
+    {
+      "text": "The JSON artifact was saved to the outputs directory",
+      "passed": false,
+      "evidence": "No JSON artifact with run task results was saved to the outputs directory. The only files created were transcript.md, user_notes.md, and metrics.json (executor metadata, not task results)."
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 10,
+    "total": 11,
+    "pass_rate": 0.09
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 1,
+      "Write": 3,
+      "Bash": 1,
+      "Edit": 0,
+      "Glob": 0,
+      "Grep": 0,
+      "ToolSearch": 2,
+      "mcp__terraform__get_run_details": 1
+    },
+    "total_tool_calls": 8,
+    "total_steps": 3,
+    "errors_encountered": 0,
+    "output_chars": 4484,
+    "transcript_chars": 3449
+  },
+  "claims": [
+    {
+      "claim": "The run has 1 task stage (ts-rEt6yNBSjhxDpKMU)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Extracted from the get_run_details MCP response which returned this task stage ID."
+    },
+    {
+      "claim": "The post-plan stage ran for approximately 43 seconds",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Calculated from timestamps: post-plan-running-at (09:38:29Z) to post-plan-completed-at (09:39:12Z) = 43 seconds."
+    },
+    {
+      "claim": "The task stage outcome is 'Passed' because the run proceeded to apply",
+      "type": "quality",
+      "verified": false,
+      "evidence": "This inference is incorrect. The run could proceed to apply even with a failed advisory task. The actual task failed with advisory enforcement, meaning the stage passed but the individual task did not."
+    },
+    {
+      "claim": "No dedicated MCP tool exists for task stage details",
+      "type": "process",
+      "verified": true,
+      "evidence": "The executor searched with ToolSearch and confirmed no task-stage-specific endpoints are available in the MCP tool set."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Task stage outcome inferred as 'passed' but could be advisory failure that didn't block apply",
+      "Individual task names and results unknown without dedicated API call"
+    ],
+    "needs_review": [
+      "Direct API call to GET /api/v2/task-stages/ts-rEt6yNBSjhxDpKMU needed for full details"
+    ],
+    "workarounds": [
+      "Used status timestamps to infer task stage timing",
+      "Inferred task outcome from overall run status"
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The output includes a markdown table with run task results",
+        "reason": "This assertion could pass for a table that merely lists task stage IDs rather than actual task results. Consider specifying that the table must contain task name, status, and enforcement level columns."
+      },
+      {
+        "assertion": "The table row count matches the actual number of task results (1 task)",
+        "reason": "This assertion is weak because a table with 1 row of wrong data would pass. It overlaps with other assertions that check content. Consider removing it or combining with content checks."
+      },
+      {
+        "assertion": "Outcomes are shown: Estimation (Passed), Policy (Failed), and Recommendation (Passed)",
+        "reason": "This assertion references specific sub-outcomes within a run task. It is unclear whether these are separate tasks or sub-results within a single task. The assertion should clarify the data source and structure expected."
+      }
+    ],
+    "overall": "The assertions are well-targeted for this use case and effectively discriminate between a baseline (no skill) and a working skill. The baseline correctly fails 10 of 11 assertions, showing the assertions require genuine task-result data. One suggestion: assertion 10 about Estimation/Policy/Recommendation outcomes may be testing sub-fields of the Cloudability response rather than separate tasks — clarifying this would help."
+  }
+}

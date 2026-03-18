@@ -1,0 +1,116 @@
+{
+  "expectations": [
+    {
+      "text": "The run ID 'run-iURWDL3wVxzefsjo' was correctly extracted from the URL",
+      "passed": true,
+      "evidence": "Transcript Step 1: 'Extracted the run ID run-iURWDL3wVxzefsjo from the provided Terraform Cloud URL'. Also confirmed in run_task_results.json: \"run_id\": \"run-iURWDL3wVxzefsjo\"."
+    },
+    {
+      "text": "The script scripts/get-run-task-results.sh was called with either the URL or extracted run ID",
+      "passed": false,
+      "evidence": "This is a WITHOUT_SKILL baseline execution. No skill script exists. The executor used mcp__terraform__get_run_details and direct curl API calls instead. The script scripts/get-run-task-results.sh was never called."
+    },
+    {
+      "text": "The output shows task results in a structured format (table or clear listing) with non-empty data rows",
+      "passed": true,
+      "evidence": "run_task_results.json contains a well-structured JSON with task_results array containing one entry (Apptio-Cloudability) with status, enforcement_level, message, and 3 outcomes. The Final Result section of the transcript also presents results in a clear numbered listing."
+    },
+    {
+      "text": "The Apptio-Cloudability task and its failed/advisory status are displayed",
+      "passed": true,
+      "evidence": "Transcript Final Result: 'Apptio-Cloudability (advisory enforcement): Overall Status: Failed (but advisory, so did not block the run)'. Also in run_task_results.json: \"task_name\": \"Apptio-Cloudability\", \"status\": \"failed\", \"enforcement_level\": \"advisory\"."
+    },
+    {
+      "text": "The cost information from the message field is presented",
+      "passed": true,
+      "evidence": "Transcript Final Result: 'Message: \"Total Cost before: 31.54, after: 31.64, diff: +0.10\"'. Also in run_task_results.json: \"message\": \"Total Cost before: 31.54, after: 31.64, diff: +0.10\"."
+    },
+    {
+      "text": "Outcomes for the task result are shown with their status tags",
+      "passed": true,
+      "evidence": "Transcript Final Result lists 3 outcomes with status: '1. Estimation (Cost Estimation Result): Passed, 2. Policy (Policy Evaluation Result): Failed (severity: Gated), 3. Recommendation (Recommendation Result): Passed'. Also in run_task_results.json outcomes array with status fields for each."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 1,
+    "total": 6,
+    "pass_rate": 0.83
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 1,
+      "Write": 4,
+      "Bash": 6,
+      "Edit": 0,
+      "Glob": 0,
+      "Grep": 0,
+      "ToolSearch": 2,
+      "mcp__terraform__get_run_details": 1
+    },
+    "total_tool_calls": 14,
+    "total_steps": 5,
+    "errors_encountered": 1,
+    "output_chars": 5546,
+    "transcript_chars": 3240
+  },
+  "timing": {},
+  "claims": [
+    {
+      "claim": "The run status is 'applied'",
+      "type": "factual",
+      "verified": true,
+      "evidence": "run_task_results.json shows \"run_status\": \"applied\" — consistent with the MCP tool result described in Step 2"
+    },
+    {
+      "claim": "There is one task stage (post_plan) with one task result",
+      "type": "factual",
+      "verified": true,
+      "evidence": "run_task_results.json contains a single task_stage and a single entry in task_results array"
+    },
+    {
+      "claim": "No MCP tool exists for fetching task stage or task result details",
+      "type": "process",
+      "verified": true,
+      "evidence": "The available deferred tools list shows no task-stage or task-result specific MCP tools. The executor correctly identified this gap and used curl as a workaround."
+    },
+    {
+      "claim": "The outcome body endpoints returned empty content",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Cannot independently verify — this claim comes from the transcript Step 5 but no raw API response is preserved in the outputs"
+    },
+    {
+      "claim": "3 outcomes were retrieved: Estimation (Passed), Policy (Failed/Gated), Recommendation (Passed)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "run_task_results.json outcomes array contains exactly these 3 entries with matching statuses"
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Task result outcome body endpoints returned empty — may contain additional detail not retrieved",
+      "Unclear whether empty body is due to permissions, API limitations, or task integration design"
+    ],
+    "needs_review": [
+      "Policy failure details — outcome shows Failed with Gated severity but no specifics on which policy",
+      "Whether +$0.10 cost difference is expected or concerning"
+    ],
+    "workarounds": [
+      "No MCP tool for task stage/result details — used direct curl API calls with TFE_TOKEN"
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The script scripts/get-run-task-results.sh was called with either the URL or extracted run ID",
+        "reason": "This assertion is designed to test the skill's script usage and will always fail in a without_skill baseline. It is appropriate for measuring skill adoption but not for evaluating whether the task was completed correctly. Consider separating skill-usage assertions from outcome assertions."
+      },
+      {
+        "assertion": "The output shows task results in a structured format (table or clear listing) with non-empty data rows",
+        "reason": "This assertion is somewhat vague — 'structured format' and 'clear listing' are subjective. A JSON blob technically qualifies. Consider checking for a specific rendered table format if that is the desired output."
+      }
+    ],
+    "overall": "The assertions cover the key data points well (task name, status, cost message, outcomes). The script-usage assertion is inherently skill-specific and serves its purpose for with_skill vs without_skill comparison. One gap: no assertion checks whether the advisory enforcement level distinction is correctly explained (i.e., that the run was not blocked despite the failure)."
+  }
+}

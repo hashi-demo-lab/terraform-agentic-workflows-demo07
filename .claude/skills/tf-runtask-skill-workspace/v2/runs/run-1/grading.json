@@ -1,0 +1,139 @@
+{
+  "expectations": [
+    {
+      "text": "The output includes a markdown table with run task results",
+      "passed": true,
+      "evidence": "Transcript Step 5 shows a Tier 2 markdown table: '| Task Name | Status | Enforcement | Message |' with proper header separators and a data row for Apptio-Cloudability. A Tier 3 outcomes table is also present: '| Outcome | Description | Status | Severity |'."
+    },
+    {
+      "text": "The task name 'Apptio-Cloudability' appears in the output",
+      "passed": true,
+      "evidence": "Transcript Step 5 Tier 2 table row: '| Apptio-Cloudability | failed | advisory | Total Cost before: 31.54, after: 31.64, diff: +0.10 |'. Also present in the JSON output at task_results[0].task_name: 'Apptio-Cloudability'."
+    },
+    {
+      "text": "The status 'failed' is shown for the task result",
+      "passed": true,
+      "evidence": "Transcript Step 5 table row shows status 'failed' for Apptio-Cloudability. JSON output confirms task_results[0].status: 'failed'."
+    },
+    {
+      "text": "The enforcement level 'advisory' is indicated",
+      "passed": true,
+      "evidence": "Transcript Step 5 table row shows enforcement 'advisory'. JSON output confirms task_results[0].enforcement_level: 'advisory'. Tier 4 also explains: 'the workspace-level enforcement is set to \"advisory\"'."
+    },
+    {
+      "text": "The message about cost diff (Total Cost before/after) is shown",
+      "passed": true,
+      "evidence": "Transcript Step 5 table Message column: 'Total Cost before: 31.54, after: 31.64, diff: +0.10'. Matches JSON field task_results[0].message exactly."
+    },
+    {
+      "text": "The stage 'post_plan' or 'Post-Plan' is identified",
+      "passed": true,
+      "evidence": "Transcript Step 5 Tier 2 heading: '### Post-Plan Tasks (stage status: passed)'. JSON output confirms task_stages[0].stage: 'post_plan'."
+    },
+    {
+      "text": "The overall stage status 'passed' is shown (stage passed despite advisory failure)",
+      "passed": true,
+      "evidence": "Transcript Step 5: '### Post-Plan Tasks (stage status: passed)' and note: 'The stage status is \"passed\" even though the task failed, because the enforcement level is \"advisory\" (does not block the run).' JSON confirms task_stages[0].status: 'passed'."
+    },
+    {
+      "text": "The script scripts/get-run-task-results.sh was executed and produced valid JSON output with run_id field",
+      "passed": true,
+      "evidence": "Transcript Step 3: 'Run get-run-task-results.sh with run ID run-iURWDL3wVxzefsjo' using Bash tool. The saved JSON at outputs/run-task-results.json contains run_id: 'run-iURWDL3wVxzefsjo' at line 2, and is valid JSON with 121 lines of structured data including task_stages and summary objects."
+    },
+    {
+      "text": "The table row count matches the actual number of task results (1 task)",
+      "passed": true,
+      "evidence": "Transcript Tier 1 summary: 'Total tasks: 1 | Passed: 0 | Failed: 1'. The Tier 2 table has exactly 1 data row (Apptio-Cloudability). JSON summary confirms total_tasks: 1, and task_results array has length 1."
+    },
+    {
+      "text": "Outcomes are shown: Estimation (Passed), Policy (Failed), and Recommendation (Passed)",
+      "passed": true,
+      "evidence": "Transcript Step 5 Tier 3 outcomes table shows three rows: 'Estimation | Cost Estimation Result | Passed | --', 'Policy | Policy Evaluation Result | Failed | Gated', 'Recommendation | Recommendation Result | Passed | --'. All three match the JSON outcomes array."
+    },
+    {
+      "text": "The JSON artifact was saved to a file and contains valid run task data",
+      "passed": true,
+      "evidence": "File outputs/run-task-results.json exists (14382 bytes), contains valid JSON with run_id, tfe_hostname, task_stages array with nested task_results and outcomes, and a summary object. Transcript Step 4 confirms: 'Re-run script and save output to run-task-results.json'."
+    },
+    {
+      "text": "The output includes actionable detail from outcome bodies — such as policy violations, failing resources, or cost recommendations",
+      "passed": true,
+      "evidence": "Transcript shows extensive Tier 3 detail sections: (1) Estimation detail with resource-level cost table (TOTAL 31.54->31.64, CloudWatch alarm +0.10), (2) Policy detail listing '23 Failing Resources' including 22 missing cost-center tag and 1 EC2 instance type violation (t3.small vs required t2.small), (3) Recommendation detail with instance comparison table (t3.small -> t4g.small, price 0.0264 -> 0.0212). Tier 4 synthesizes actionable insights. All detail is extracted from the body_html fields in the JSON, not just surface-level status."
+    }
+  ],
+  "summary": {
+    "passed": 12,
+    "failed": 0,
+    "total": 12,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 2,
+      "Write": 3,
+      "Bash": 3,
+      "Edit": 0,
+      "Glob": 0,
+      "Grep": 0
+    },
+    "total_tool_calls": 8,
+    "total_steps": 5,
+    "errors_encountered": 0,
+    "output_chars": 14481,
+    "transcript_chars": 5422
+  },
+  "timing": {},
+  "claims": [
+    {
+      "claim": "Script returned JSON with 1 task stage, 1 task result, and 3 outcomes",
+      "type": "factual",
+      "verified": true,
+      "evidence": "JSON file confirms: task_stages array has 1 element, task_results array has 1 element, outcomes array has 3 elements (Estimation, Policy, Recommendation)."
+    },
+    {
+      "claim": "23 resources are failing policy checks",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The Policy outcome body_html contains '<h3>❌ 23 Failing Resources</h3>' and lists 23 individual resource detail sections, each with a cost-center tag violation. One (app_server) also has an instance type violation."
+    },
+    {
+      "claim": "Monthly cost impact is +0.10 USD",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Estimation outcome body_html heading: 'Cost Estimation - Monthly Cost Impact: +0.10 USD'. Cost summary table shows TOTAL difference of +0.10."
+    },
+    {
+      "claim": "EC2 instance recommendation is t3.small to t4g.small with ~20% savings",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Recommendation body_html table shows Instance Type current: t3.small, recommended: t4g.small. Price Per Unit 0.0264 -> 0.0212, which is a 19.7% reduction (~20%)."
+    },
+    {
+      "claim": "The stage passed despite the task failing because enforcement is advisory",
+      "type": "factual",
+      "verified": true,
+      "evidence": "JSON confirms stage status 'passed' and task status 'failed' with enforcement_level 'advisory'. This is correct HCP Terraform behavior: advisory tasks do not block runs."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The script scripts/get-run-task-results.sh was executed and produced valid JSON output with run_id field",
+        "reason": "This checks that the script ran but not whether it handled errors gracefully. Consider adding an assertion that tests the script against an invalid run ID to verify error handling."
+      },
+      {
+        "reason": "No assertion checks the 4-tier output structure explicitly (Tier 1 summary line, Tier 2 stage tables, Tier 3 outcome details, Tier 4 actionable insights). Several assertions implicitly touch tiers, but a structural assertion would catch regressions where tiers are omitted or reordered."
+      },
+      {
+        "assertion": "Outcomes are shown: Estimation (Passed), Policy (Failed), and Recommendation (Passed)",
+        "reason": "This hard-codes 3 specific outcomes. If the run task provider changes its outcomes, this assertion tests knowledge of the specific vendor, not the skill's ability to handle arbitrary outcomes. Consider testing that 'all outcomes from the JSON are represented in the output' instead."
+      }
+    ],
+    "overall": "Strong assertion set overall. The 12 assertions cover the key aspects well: data fidelity (task name, status, enforcement), structural output (tables, stage headings), and depth (actionable detail from outcome bodies). The main gap is that assertions are tightly coupled to this specific run's data rather than testing the skill's general behavior."
+  }
+}

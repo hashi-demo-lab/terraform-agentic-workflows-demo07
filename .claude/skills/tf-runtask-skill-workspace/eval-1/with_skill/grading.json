@@ -1,0 +1,98 @@
+{
+  "expectations": [
+    {
+      "text": "The run ID 'run-iURWDL3wVxzefsjo' was correctly extracted from the URL",
+      "passed": true,
+      "evidence": "The JSON output file contains \"run_id\": \"run-iURWDL3wVxzefsjo\" at line 2, confirming the run ID was extracted from the URL. The transcript Step 3 also states: \"Script correctly extracted the run ID and hostname from the URL.\""
+    },
+    {
+      "text": "The script scripts/get-run-task-results.sh was called with either the URL or extracted run ID",
+      "passed": true,
+      "evidence": "Transcript Step 3 shows: Bash `scripts/get-run-task-results.sh \"https://app.terraform.io/app/hashi-demos-apj/workspaces/terraform-agentic-workflows-demo01/runs/run-iURWDL3wVxzefsjo\"` — the script was called with the full URL."
+    },
+    {
+      "text": "The output shows task results in a structured format (table or clear listing) with non-empty data rows",
+      "passed": true,
+      "evidence": "The transcript Final Result section contains multiple markdown tables with data rows. For example, the main task table shows: | Apptio-Cloudability | failed | advisory | Total Cost before: 31.54, after: 31.64, diff: +0.10 |. The outcomes table shows 3 rows (Estimation, Policy, Recommendation). Additional detail tables show cost breakdowns and resource information."
+    },
+    {
+      "text": "The Apptio-Cloudability task and its failed/advisory status are displayed",
+      "passed": true,
+      "evidence": "Transcript Final Result shows the table row: | Apptio-Cloudability | failed | advisory | Total Cost before: 31.54, after: 31.64, diff: +0.10 |. The JSON output also confirms: \"task_name\": \"Apptio-Cloudability\", \"status\": \"failed\", \"enforcement_level\": \"advisory\"."
+    },
+    {
+      "text": "The cost information from the message field is presented",
+      "passed": true,
+      "evidence": "The message field content \"Total Cost before: 31.54, after: 31.64, diff: +0.10\" appears in the main task results table in the transcript. Additionally, the detailed cost estimation section shows \"Monthly Cost Impact: +0.10 USD\" with a breakdown table showing TOTAL costs (31.54 -> 31.64, +0.10)."
+    },
+    {
+      "text": "Outcomes for the task result are shown with their status tags",
+      "passed": true,
+      "evidence": "The transcript shows an outcomes table with all 3 outcomes and their status tags: Estimation (Passed), Policy (Failed, Gated severity), Recommendation (Passed). Each outcome row includes the outcome name, description, status, and severity columns. The JSON confirms 3 outcomes with tags containing label/value pairs for Status and Severity."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 2,
+      "Write": 3,
+      "Bash": 3,
+      "Edit": 0,
+      "Glob": 0,
+      "Grep": 0
+    },
+    "total_tool_calls": 8,
+    "total_steps": 5,
+    "errors_encountered": 0,
+    "output_chars": 14481,
+    "transcript_chars": 4413
+  },
+  "claims": [
+    {
+      "claim": "Script returned structured JSON with 1 task stage (post_plan)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The run-task-results.json file contains exactly one task_stages entry with \"stage\": \"post_plan\"."
+    },
+    {
+      "claim": "There are 3 outcomes (Estimation, Policy, Recommendation)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The JSON output contains 3 outcome objects with outcome_ids: \"Estimation\", \"Policy\", and \"Recommendation\". The outcomes_count field is 3."
+    },
+    {
+      "claim": "The stage status is 'passed' despite the task failing because enforcement is advisory",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The JSON shows stage status \"passed\" while the task result status is \"failed\" with enforcement_level \"advisory\". The transcript note at the end correctly explains this relationship."
+    },
+    {
+      "claim": "23 Failing Resources in the Policy evaluation",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The Policy outcome body_html contains \"23 Failing Resources\" and the transcript correctly states \"23 Failing Resources\". Counting the resource detail sections in the HTML confirms 23 resources listed."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The output shows task results in a structured format (table or clear listing) with non-empty data rows",
+        "reason": "This assertion only checks the transcript's final presentation, not the actual output file. A more discriminating assertion would verify the run-task-results.json file contains valid JSON with the expected structure (task_stages array, task_results nested within, outcomes nested within those)."
+      },
+      {
+        "reason": "No assertion checks that the HTML body content from outcomes was parsed and presented in a human-readable way. The skill did an excellent job converting HTML tables into markdown, but nothing validates that the detailed cost breakdown, policy failures, or recommendations were surfaced beyond the top-level summary. An assertion like 'The detailed cost breakdown showing per-resource costs is presented' would catch cases where the skill only shows the summary message but ignores the rich outcome body content."
+      }
+    ],
+    "overall": "Assertions cover the key aspects well — URL extraction, script invocation, structured output, task status, cost data, and outcomes. The main gap is that assertions focus on top-level fields and don't verify the rich detail from outcome body_html was surfaced, which is arguably the most valuable part of the skill's output."
+  }
+}

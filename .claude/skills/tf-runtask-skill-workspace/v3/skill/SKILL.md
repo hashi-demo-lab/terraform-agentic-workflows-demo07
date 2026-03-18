@@ -48,9 +48,9 @@ Parse the JSON and present a markdown summary. The presentation has three tiers 
 ```
 ### Post-Plan Tasks (stage status: passed)
 
-| Task Name | Status | Enforcement | Message |
-|-----------|--------|-------------|---------|
-| Apptio-Cloudability | failed | advisory | Total Cost before: 31.54, after: 31.64, diff: +0.10 |
+| Task Name | Status | Enforcement | Message | Link |
+|-----------|--------|-------------|---------|------|
+| Apptio-Cloudability | failed | advisory | Total Cost before: 31.54, after: 31.64, diff: +0.10 | [Results](url) |
 ```
 
 **Tier 3 — Outcome sub-tables** under each task result that has outcomes:
@@ -107,14 +107,14 @@ This distinction matters because users asking "are there run tasks?" need to kno
 - `status` — `pending`, `running`, `passed`, `failed`, `errored`, `unreachable`
 - `enforcement_level` — `advisory` (warning only) or `mandatory` (blocks run)
 - `message` — Status message from the external service
-- `url` — Link to external service results (if present)
+- `url` — Link to external service results (if present). Include this in the Tier 2 table as a clickable link so users can jump to the full report in the external tool.
 - `outcomes_count` — Number of outcome categories
 
 **Outcome fields** (`task_stages[].task_results[].outcomes[]`):
-- `outcome_id` — Category name (e.g., "Estimation", "Policy", "Recommendation")
+- `outcome_id` — Category name. These vary by vendor — don't assume specific names like "Estimation" or "Policy". Present whatever categories the task returns.
 - `description` — Human-readable description
 - `tags` — Status/severity via `tags[].label == "Status"` → `tags[].value[0].label` and `tags[].label == "Severity"` → `tags[].value[0].label`
-- `body_html` — Full HTML detail (may be null)
+- `body_html` — Full HTML detail (may be null). When present, always extract and summarize key findings for the Tier 4 actionable insights.
 
 The `summary` object has: `total_tasks`, `passed`, `failed`, `errored`, `pending`, `unreachable`.
 
@@ -126,9 +126,11 @@ Stage ordering (show in execution order): `pre_plan` → `post_plan` → `pre_ap
 - If `enforcement_level` is `mandatory` and the task `failed`, note that this blocks the run from proceeding.
 - If the stage `is_overridable`, mention that the stage can be manually overridden.
 
-### Supplementing with MCP run context
+### Enriching with MCP run context
 
-If the user needs broader context (trigger message, overall run status, plan/apply details), also call `mcp__terraform__get_run_details` with the run ID. This provides complementary metadata the run task script doesn't cover.
+After fetching task results, also call `mcp__terraform__get_run_details` with the run ID to get complementary metadata: run status, trigger source, Terraform version, timestamps, and plan/apply state. This context helps the user understand where the run is in its lifecycle and why task results look the way they do. For example, knowing a run was triggered via CLI with auto-apply explains why it proceeded despite advisory failures.
+
+Include relevant run metadata in your response — especially run status, trigger source, and whether the run has been applied.
 
 ## Error handling
 
