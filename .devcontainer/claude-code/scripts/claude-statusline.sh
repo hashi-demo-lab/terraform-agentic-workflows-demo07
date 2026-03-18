@@ -382,7 +382,6 @@ build_bar() {
 
   printf '%b %b%b %b%b' "${bar_label}ctx${RST}" "$bar" "${RST}" "${c_pct}${BOLD}${pct}%${RST}" "${tokens_suffix}${RST}"
 }
-}
 
 # ══════════════════════════════════════════════════════════════════════
 # ── ASSEMBLE                                                         ──
