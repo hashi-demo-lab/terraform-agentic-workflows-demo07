@@ -195,7 +195,7 @@ fi
 # --- Evaluate results ---
 gate_failed=0
 warn_failed=0
-for i in "${!check_names[@]}"; do
+for ((i=0; i<${#check_names[@]}; i++)); do
     if [[ "${check_passed[$i]}" == "false" ]]; then
         if [[ "${check_severities[$i]}" == "GATE" ]]; then
             gate_failed=$((gate_failed + 1))
@@ -220,7 +220,7 @@ fi
 if $JSON_MODE; then
     # Build checks JSON array
     checks_json=""
-    for i in "${!check_names[@]}"; do
+    for ((i=0; i<${#check_names[@]}; i++)); do
         [[ -n "$checks_json" ]] && checks_json+=","
         checks_json+=$(printf '{"name":"%s","severity":"%s","passed":%s,"detail":"%s"}' \
             "${check_names[$i]}" "${check_severities[$i]}" "${check_passed[$i]}" "${check_details[$i]}")
@@ -232,7 +232,7 @@ else
     echo "======================"
     echo ""
 
-    for i in "${!check_names[@]}"; do
+    for ((i=0; i<${#check_names[@]}; i++)); do
         local_severity="${check_severities[$i]}"
         local_name="${check_names[$i]}"
         local_status="Passed"
@@ -248,7 +248,7 @@ else
         echo ""
         echo "Quick Setup:"
         step=1
-        for i in "${!check_names[@]}"; do
+        for ((i=0; i<${#check_names[@]}; i++)); do
             if [[ "${check_passed[$i]}" == "false" && "${check_severities[$i]}" == "GATE" ]]; then
                 echo "  $step. ${check_names[$i]}: ${check_details[$i]}"
                 step=$((step + 1))

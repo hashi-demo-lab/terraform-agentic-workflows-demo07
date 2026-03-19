@@ -7,63 +7,44 @@ SHORT_NAME=""
 BRANCH_NUMBER=""
 WORKFLOW_TYPE="module"
 ARGS=()
-i=1
-while [ $i -le $# ]; do
-    arg="${!i}"
-    case "$arg" in
+while [ $# -gt 0 ]; do
+    case "$1" in
         --json)
             JSON_MODE=true
             ;;
         --short-name)
-            if [ $((i + 1)) -gt $# ]; then
+            shift
+            if [ $# -eq 0 ] || [[ "$1" == --* ]]; then
                 echo 'Error: --short-name requires a value' >&2
                 exit 1
             fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            # Check if the next argument is another option (starts with --)
-            if [[ "$next_arg" == --* ]]; then
-                echo 'Error: --short-name requires a value' >&2
-                exit 1
-            fi
-            SHORT_NAME="$next_arg"
+            SHORT_NAME="$1"
             ;;
         --number)
-            if [ $((i + 1)) -gt $# ]; then
+            shift
+            if [ $# -eq 0 ] || [[ "$1" == --* ]]; then
                 echo 'Error: --number requires a value' >&2
                 exit 1
             fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            if [[ "$next_arg" == --* ]]; then
-                echo 'Error: --number requires a value' >&2
-                exit 1
-            fi
-            BRANCH_NUMBER="$next_arg"
+            BRANCH_NUMBER="$1"
             ;;
         --issue)
-            if [ $((i + 1)) -gt $# ]; then
-                echo 'Error: --issue requires a value' >&2
-                exit 1
-            fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            if [[ "$next_arg" == --* ]]; then
+            shift
+            if [ $# -eq 0 ] || [[ "$1" == --* ]]; then
                 echo 'Error: --issue requires a value' >&2
                 exit 1
             fi
             # Use issue number as branch number
-            BRANCH_NUMBER="$next_arg"
+            BRANCH_NUMBER="$1"
             ;;
         --workflow)
-            if [ $((i + 1)) -gt $# ]; then
+            shift
+            if [ $# -eq 0 ] || [[ "$1" == --* ]]; then
                 echo 'Error: --workflow requires a value (module, provider, consumer)' >&2
                 exit 1
             fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            case "$next_arg" in
-                module|provider|consumer) WORKFLOW_TYPE="$next_arg" ;;
+            case "$1" in
+                module|provider|consumer) WORKFLOW_TYPE="$1" ;;
                 *) echo "Error: --workflow must be one of: module, provider, consumer" >&2; exit 1 ;;
             esac
             ;;
@@ -90,10 +71,10 @@ while [ $i -le $# ]; do
             exit 0
             ;;
         *)
-            ARGS+=("$arg")
+            ARGS+=("$1")
             ;;
     esac
-    i=$((i + 1))
+    shift
 done
 
 FEATURE_DESCRIPTION="${ARGS[*]}"
@@ -244,7 +225,7 @@ generate_branch_name() {
         if ! echo "$word" | grep -qiE "$stop_words"; then
             if [ ${#word} -ge 3 ]; then
                 meaningful_words+=("$word")
-            elif echo "$description" | grep -q "\b${word^^}\b"; then
+            elif word_upper=$(echo "$word" | tr '[:lower:]' '[:upper:]') && echo "$description" | grep -q "\b${word_upper}\b"; then
                 # Keep short words if they appear as uppercase in original (likely acronyms)
                 meaningful_words+=("$word")
             fi
