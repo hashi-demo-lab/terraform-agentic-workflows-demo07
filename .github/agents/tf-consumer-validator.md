@@ -4,12 +4,16 @@ name: tf-consumer-validator
 tools: ['view', 'apply_patch', 'bash', 'read_bash', 'write_bash', 'stop_bash', 'list_bash', 'rg', 'glob', 'ask_user', 'skill', 'task', 'read_agent', 'list_agents', 'sql', 'report_intent', 'task_complete', 'fetch_copilot_cli_documentation', 'terraform/get_workspace_details', 'terraform/list_runs', 'terraform/get_run_details']
 skills:
   - tf-judge-criteria
+  - tf-runtask
+  - tf-report-template
 ---
 
 
 # Consumer Validation Agent
 
 use skill tf-judge-criteria
+use skill tf-runtask
+use skill tf-report-template
 
 Validate consumer Terraform code against the design document, perform quality scoring using `tf-judge-criteria`, and optionally deploy to a sandbox workspace via HCP Terraform. Produces a structured validation report. Security review is not performed here — Sentinel policies enforce security at the workspace level, and modules are inherently secure by design.
 
