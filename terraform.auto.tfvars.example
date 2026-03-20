@@ -1,0 +1,2 @@
+owner              = "platform-team"
+lambda_source_path = "./lambda"
