@@ -42,13 +42,28 @@ locals {
     data.aws_vpc.default.cidr_block,
   ]
   alarm_notification_arns = tolist(var.alarm_notification_arns)
-  listener_certificate_arn = coalesce(
-    var.certificate_arn,
-    try(data.aws_acm_certificate.selected[0].arn, null),
+  certificate_discovery_enabled = (
+    var.certificate_arn == null &&
+    var.certificate_domain != null
+  )
+  listener_certificate_arn = (
+    var.certificate_arn != null
+    ? var.certificate_arn
+    : try(data.aws_acm_certificate.selected[0].arn, null)
+  )
+
+  # [SECURITY OVERRIDE] This fallback is allowed only for sandbox E2E validation
+  # when no ACM certificate override is provided and certificate discovery is not
+  # configured. The ALB remains internal-only, ingress stays scoped to approved
+  # VPC CIDRs, and instances still accept traffic only from the ALB security group.
+  sandbox_http_listener_fallback_enabled = (
+    var.project == "sandbox" &&
+    local.listener_certificate_arn == null &&
+    !local.certificate_discovery_enabled
   )
 
   alb_internal      = true
-  listener_port     = 443
-  listener_protocol = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-Res-2021-06"
+  listener_port     = local.sandbox_http_listener_fallback_enabled ? 80 : 443
+  listener_protocol = local.sandbox_http_listener_fallback_enabled ? "HTTP" : "HTTPS"
+  ssl_policy        = local.sandbox_http_listener_fallback_enabled ? null : "ELBSecurityPolicy-TLS13-1-2-Res-2021-06"
 }

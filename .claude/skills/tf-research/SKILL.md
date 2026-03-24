@@ -104,4 +104,3 @@ For each research question, document:
 2. **Missing computed attributes** — Check what the resource exports. Some attributes are only available after apply.
 3. **Ignoring deprecation warnings** — Provider docs note deprecated arguments. Use the recommended replacement.
 4. **Over-constraining provider versions** — Modules should use `>=` constraints, not `~>`, to maximize consumer compatibility.
-

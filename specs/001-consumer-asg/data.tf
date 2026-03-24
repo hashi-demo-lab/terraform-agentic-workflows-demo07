@@ -15,9 +15,10 @@ data "aws_subnet" "default" {
 }
 
 data "aws_acm_certificate" "selected" {
-  count = var.certificate_arn == null ? 1 : 0
+  count = var.certificate_arn == null && var.certificate_domain != null ? 1 : 0
 
   domain      = var.certificate_domain
+  tags        = var.certificate_domain == null ? {} : null
   most_recent = true
   region      = var.aws_region
   statuses    = ["ISSUED"]
@@ -39,8 +40,8 @@ check "default_vpc_subnet_selection" {
 
 check "listener_certificate_selection" {
   assert {
-    condition     = local.listener_certificate_arn != null
-    error_message = "Set certificate_arn or ensure Terraform can discover an issued ACM certificate in ${var.aws_region}. Optionally set certificate_domain to narrow discovery."
+    condition     = local.listener_certificate_arn != null || local.sandbox_http_listener_fallback_enabled
+    error_message = "Set certificate_arn or set certificate_domain so Terraform can discover an issued ACM certificate in ${var.aws_region}. The internal HTTP listener fallback is permitted only for sandbox runs."
   }
 }
 

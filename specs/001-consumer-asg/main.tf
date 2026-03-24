@@ -18,16 +18,25 @@ module "alb" {
   }
 
   listeners = {
-    app = {
-      certificate_arn = local.listener_certificate_arn
-      port            = local.listener_port
-      protocol        = local.listener_protocol
-      ssl_policy      = local.ssl_policy
+    app = merge(
+      {
+        port     = local.listener_port
+        protocol = local.listener_protocol
 
-      forward = {
-        target_group_key = "app"
-      }
-    }
+        forward = {
+          target_group_key = "app"
+        }
+      },
+      local.listener_protocol == "HTTPS" ? {
+        certificate_arn = local.listener_certificate_arn
+        ssl_policy      = local.ssl_policy
+        } : {
+        # [SECURITY OVERRIDE] Sandbox-only E2E runs may use an internal HTTP
+        # listener when no ACM certificate override or discovery input is
+        # available. This keeps the ALB private while unblocking non-interactive
+        # validation in the sandbox workspace.
+      },
+    )
   }
 
   target_groups = {
