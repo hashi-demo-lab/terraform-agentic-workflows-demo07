@@ -1,0 +1,240 @@
+# Consumer Design: 001-consumer-asg
+
+**Branch**: feat/001-consumer-asg
+**Date**: 2026-03-24
+**Status**: Approved
+**Provider**: aws ~> 5.0
+**Terraform**: >= 1.14
+**HCP Terraform Org**: hashi-demos-apj
+**HCP Terraform Project**: sandbox
+
+---
+
+## Table of Contents
+
+1. [Purpose & Requirements](#1-purpose--requirements)
+2. [Module Selection & Architecture](#2-module-selection--architecture)
+3. [Module Wiring](#3-module-wiring)
+4. [Security Controls](#4-security-controls)
+5. [Implementation Checklist](#5-implementation-checklist)
+6. [Open Questions](#6-open-questions)
+
+---
+
+## 1. Purpose & Requirements
+
+This deployment provisions a development-grade internal web entry point and elastic compute tier for a sandbox application that needs to accept internal ALB traffic from within the default VPC, distribute requests across multiple Availability Zones, and scale within a small development capacity envelope. It exists to provide a non-interactive end-to-end consumer deployment in HCP Terraform that demonstrates private-registry module composition, remote execution, dynamic AWS credentials, ACM certificate override-or-optional-discovery, a sandbox-only internal HTTP fallback when certificates are unavailable, and operational monitoring without introducing bespoke networking or unmanaged infrastructure patterns.
+
+**Scope boundary**: This deployment excludes creation of a new VPC, NAT gateways, DNS records, ACM certificate lifecycle management, application build or release pipelines, operating system hardening beyond module defaults, database or stateful services, and any production-grade resilience features beyond the requested two-AZ development footprint.
+
+### Requirements
+
+**Functional requirements** -- what the deployment must provision:
+
+- Provision an internal application entry point that distributes traffic across exactly two Availability Zones in `ap-southeast-2`, preferring HTTPS and allowing an internal HTTP fallback only for sandbox E2E validation when no ACM certificate override or discovery input is available.
+- Provision an elastic compute fleet that maintains at least one healthy application instance and can scale out automatically when sustained load increases.
+- Ensure replacement compute instances are created from a consistent instance configuration so that scaling and recovery behavior are deterministic.
+- Route application traffic from the entry point to the compute fleet using load-balancer health checks, with unhealthy targets removed from service automatically.
+- Publish CloudWatch-based operational monitoring for compute load, load balancer errors, and target health so a failed deployment state is observable.
+- Deploy into the existing default VPC and reuse default subnets rather than creating bespoke networking infrastructure.
+- Execute through the HCP Terraform workspace `sandbox_consumer_asgterraform-agentic-workflows-demo07` using remote execution and dynamic AWS credentials inherited from the project variable set.
+
+**Non-functional requirements** -- constraints like compliance, performance, availability, cost:
+
+- The deployment must remain in the `development` environment and use cost-conscious defaults appropriate for sandbox validation.
+- Capacity must remain bounded to a small development footprint with a baseline of one instance and a maximum of two instances.
+- The solution must preserve secure module defaults, avoid static AWS credentials, and prevent direct public exposure of compute instances.
+- Any HTTP listener fallback must remain internal-only, preserve least-privilege network boundaries, and be explicitly documented as a sandbox-only security override.
+- The deployment must tolerate a single-AZ failure at the load-balancer and subnet-selection layer by spanning two distinct Availability Zones in the default VPC.
+- The configuration must be compatible with HCP Terraform remote execution and keep Terraform state only in HCP Terraform.
+- The design must prefer documented private-registry module capabilities over custom resources or undocumented behaviors.
+
+---
+
+## 2. Module Selection & Architecture
+
+### Architectural Decisions
+
+**Reuse the existing default VPC**: The deployment will consume the default VPC and deterministically select two default subnets in distinct `ap-southeast-2` Availability Zones instead of creating new network infrastructure. *Rationale*: `research-private-modules.md` explicitly rejects the private VPC module because this scenario must reuse the existing default VPC, and `research-module-wiring.md` documents the required data-source pattern for default VPC and subnet discovery. *Rejected*: Creating a new VPC with private and public subnets was rejected because it violates the clarified scope, increases cost, and would add unnecessary networking constructs for a sandbox deployment.
+
+**Keep the load balancer internal and encrypted where possible**: The application entry point will remain an internal ALB, while application instances remain reachable only from the ALB security group. The listener certificate will follow an override-or-optional-discovery pattern: use `certificate_arn` when explicitly supplied, otherwise discover the most recent issued ACM certificate in `ap-southeast-2` only when `certificate_domain` is set. If neither input is available, the sandbox project may use an internal HTTP listener as a documented exception for non-interactive E2E validation. *Rationale*: remote sandbox runs are currently blocked because no issued ACM certificates exist in `ap-southeast-2`, so the design must preserve the internal ALB and least-privilege network posture while allowing a tightly scoped fallback that avoids public exposure and keeps production-style security defaults as the preferred path. *Rejected*: Public ALB exposure, direct instance exposure, and a hard runtime requirement for a workspace-supplied `certificate_arn` were rejected because they fail current security gates, widen the attack surface, or block non-interactive sandbox runs.
+
+**Use launch-template-backed target tracking scaling with development bounds**: The compute tier will use an Auto Scaling Group with launch template creation, ELB health checks, and CPU-based target tracking constrained to `min_size = 1`, `desired_capacity = 1`, and `max_size = 2`. *Rationale*: `research-private-modules.md` confirms the private `autoscaling` module supports launch templates, target tracking, and target group attachment; `research-security-cost.md` and `research-module-wiring.md` recommend CPU target tracking plus explicit ELB health-check settings for the development footprint. *Rejected*: Fixed-capacity compute was rejected because it would not demonstrate scaling behavior, and request-count scaling was rejected because the research found CPU target tracking is the simpler documented baseline.
+
+**Use override-or-autodiscover AMI selection for non-interactive sandbox runs**: The compute tier will use `image_id` when explicitly supplied; otherwise Terraform will read the AWS-managed Systems Manager public parameter for the latest Amazon Linux 2023 AMI in `ap-southeast-2`, choosing `x86_64` for `t3.micro` and `arm64` for `t4g.micro`. *Rationale*: AWS guidance recommends Systems Manager public parameters to reference the latest regional Amazon Linux AMIs, which keeps sandbox deployment non-interactive while preserving an explicit override for application-ready images. *Rejected*: Requiring a workspace-supplied AMI for every run was rejected because it blocks unattended sandbox deployment, and broad AMI discovery with unconstrained owner or name filters was rejected because it is less deterministic than AWS-managed public parameters.
+
+**Use CloudWatch alarms rather than undocumented dashboard features**: The observability layer will focus on alarm-driven monitoring for ASG CPU, ALB 5XX responses, and target-group healthy-host counts. *Rationale*: `research-private-modules.md` recommends the private `cloudwatch` module for alarm-oriented monitoring, and `research-module-wiring.md` notes that dashboard support is not clearly documented in the private registry, so the design should stay within confirmed alarm capabilities. *Rejected*: Custom CloudWatch resources or dashboard-first monitoring were rejected because they would either violate the module-first constitution or depend on undocumented module behavior.
+
+**Run through HCP Terraform remote execution with dynamic credentials**: The deployment will execute in the `hashi-demos-apj` organization, `sandbox` project, and `sandbox_consumer_asgterraform-agentic-workflows-demo07` workspace using the `agent_AWS_Dynamic_Creds` variable set for AWS authentication. *Rationale*: `research-workspace-deployment.md` identifies remote execution, project-level dynamic AWS credentials, and the target workspace as the established platform pattern. *Rejected*: Local execution and static AWS credentials were rejected because they conflict with the workspace-aware and security-first constitution requirements.
+
+### Module Inventory
+
+Each selection below is taken directly from the private-registry research and aligned to the documented wiring pattern.
+
+| Module | Registry Source | Version | Purpose | Conditional | Key Inputs | Key Outputs |
+|--------|---------------|---------|---------|-------------|------------|-------------|
+| alb | app.terraform.io/hashi-demos-apj/alb/aws | ~> 10.1 | Internal application load balancer, listener, and instance target group with HTTPS preferred and sandbox-only internal HTTP fallback (`research-private-modules.md`, `research-module-wiring.md`) | always | `internal`, `name`, `vpc_id`, `subnets`, `security_group_ingress_rules`, `listeners`, `target_groups`, `tags` | `security_group_id`, `dns_name`, `arn_suffix`, `target_groups` |
+| instance_sg | app.terraform.io/hashi-demos-apj/security-group/aws | ~> 5.3 | Least-privilege security group for application instances with ALB-sourced ingress and no unrestricted outbound internet egress (`research-private-modules.md`, `research-security-cost.md`) | always | `vpc_id`, `computed_ingress_with_source_security_group_id`, `egress_rules`, `tags` | `security_group_id` |
+| autoscaling | app.terraform.io/hashi-demos-apj/autoscaling/aws | ~> 9.0 | Launch-template-backed Auto Scaling Group with target tracking and ALB attachment (`research-private-modules.md`, `research-security-cost.md`) | always | `name`, `min_size`, `max_size`, `desired_capacity`, `image_id`, `instance_type`, `vpc_zone_identifier`, `security_groups`, `traffic_source_attachments`, `scaling_policies`, `health_check_type`, `health_check_grace_period`, `tags` | `autoscaling_group_name`, `autoscaling_group_arn`, `launch_template_id` |
+| cloudwatch | app.terraform.io/hashi-demos-apj/cloudwatch/aws | ~> 5.7 | Alarm-oriented CloudWatch monitoring for ASG CPU, ALB 5XX, and healthy host counts (`research-private-modules.md`, `research-module-wiring.md`) | always | `alarm_definitions`, `notification_arns`, `tags` | `alarm_names` |
+
+### Glue Resources
+
+| Resource Type | Logical Name | Purpose | Depends On |
+|---------------|-------------|---------|------------|
+| -- | -- | No glue resources are required. Default VPC discovery, optional ACM certificate discovery, Amazon Linux AMI autodiscovery, and two-AZ subnet selection are handled with AWS data sources and locals, which comply with the constitution without introducing raw infrastructure resources. | -- |
+
+### Workspace Configuration
+
+| Setting | Value | Notes |
+|---------|-------|-------|
+| Organization | hashi-demos-apj | HCP Terraform organization from clarified requirements and `research-workspace-deployment.md` |
+| Project | sandbox | Required target project from clarified requirements |
+| Workspace | sandbox_consumer_asgterraform-agentic-workflows-demo07 | Remote execution target workspace |
+| Execution Mode | Remote | HCP Terraform managed execution |
+| Terraform Version | >= 1.14 | Matches constitution minimum and workspace research (`1.14.x`) |
+| Variable Sets | agent_AWS_Dynamic_Creds | Project-level dynamic AWS credentials; no static keys |
+| Auto Apply | false | Matches sandbox operating pattern from research |
+| Region Handling | `aws_region = "ap-southeast-2"` | Region is configured in Terraform, not provided by the shared variable set |
+| VCS Connection | Manual/CLI-driven remote runs | Research found remote runs are preferred even if the workspace must be created first |
+
+---
+
+## 3. Module Wiring
+
+### Wiring Diagram
+
+```text
+data.aws_vpc.default.id ---------------------------> module.alb.vpc_id
+data.aws_vpc.default.id ---------------------------> module.instance_sg.vpc_id
+local.selected_default_subnet_ids -----------------> module.alb.subnets
+local.selected_default_subnet_ids -----------------> module.autoscaling.vpc_zone_identifier
+var.certificate_domain ----------------------------> data.aws_acm_certificate.selected.domain
+var.certificate_arn -------------------------------> local.listener_certificate_arn
+data.aws_acm_certificate.selected.arn -------------> local.listener_certificate_arn
+local.listener_port -------------------------------> module.alb.listeners["app"].port
+local.listener_protocol ---------------------------> module.alb.listeners["app"].protocol
+local.listener_certificate_arn --------------------> module.alb.listeners["app"].certificate_arn
+local.ssl_policy ---------------------------------> module.alb.listeners["app"].ssl_policy
+var.image_id --------------------------------------> local.autoscaling_image_id
+data.aws_ssm_parameter.amazon_linux.value ---------> local.autoscaling_image_id
+local.autoscaling_image_id ------------------------> module.autoscaling.image_id
+module.alb.security_group_id ----------------------> module.instance_sg.computed_ingress_with_source_security_group_id[0].source_security_group_id
+module.instance_sg.security_group_id -------------> module.autoscaling.security_groups
+module.alb.target_groups["app"].arn --------------> module.autoscaling.traffic_source_attachments["app"].traffic_source_identifier
+module.autoscaling.autoscaling_group_name --------> module.cloudwatch.alarm_definitions["asg_cpu"].dimensions.AutoScalingGroupName
+module.alb.arn_suffix ----------------------------> module.cloudwatch.alarm_definitions["alb_5xx"].dimensions.LoadBalancer
+module.alb.target_groups["app"].arn_suffix -------> module.cloudwatch.alarm_definitions["healthy_hosts"].dimensions.TargetGroup
+module.alb.arn_suffix ----------------------------> module.cloudwatch.alarm_definitions["healthy_hosts"].dimensions.LoadBalancer
+```
+
+### Wiring Table
+
+| Source Module | Output | Target Module | Input | Type | Transformation |
+|--------------|--------|--------------|-------|------|----------------|
+| data.aws_vpc.default | `id` | alb | `vpc_id` | `string` | direct |
+| data.aws_vpc.default | `id` | instance_sg | `vpc_id` | `string` | direct |
+| local.selected_default_subnet_ids | `value` | alb | `subnets` | `list(string)` | direct |
+| local.selected_default_subnet_ids | `value` | autoscaling | `vpc_zone_identifier` | `list(string)` | direct |
+| var.certificate_domain | `value` | data.aws_acm_certificate.selected | `domain` | `string` | direct when `certificate_arn = null` and `certificate_domain != null` |
+| var.certificate_arn + data.aws_acm_certificate.selected | `arn` | alb | `listeners["app"].certificate_arn` | `string` | `coalesce(var.certificate_arn, try(data.aws_acm_certificate.selected.arn, null))` via `local.listener_certificate_arn`; omitted when sandbox HTTP fallback is active |
+| local.listener_port | `value` | alb | `listeners["app"].port` | `number` | `80` for sandbox fallback, otherwise `443` |
+| local.listener_protocol | `value` | alb | `listeners["app"].protocol` | `string` | `HTTP` for sandbox fallback, otherwise `HTTPS` |
+| local.ssl_policy | `value` | alb | `listeners["app"].ssl_policy` | `string` | ELB TLS policy for HTTPS; omitted during sandbox HTTP fallback |
+| var.image_id + data.aws_ssm_parameter.amazon_linux | `value` | autoscaling | `image_id` | `string` | `coalesce(var.image_id, data.aws_ssm_parameter.amazon_linux.value)` via `local.autoscaling_image_id` |
+| alb | `security_group_id` | instance_sg | `computed_ingress_with_source_security_group_id[0].source_security_group_id` | `string` | direct |
+| instance_sg | `security_group_id` | autoscaling | `security_groups` | `list(string)` | wrap in single-item list |
+| alb | `target_groups["app"].arn` | autoscaling | `traffic_source_attachments["app"].traffic_source_identifier` | `string` | direct |
+| autoscaling | `autoscaling_group_name` | cloudwatch | `alarm_definitions["asg_cpu"].dimensions.AutoScalingGroupName` | `string` | direct |
+| alb | `arn_suffix` | cloudwatch | `alarm_definitions["alb_5xx"].dimensions.LoadBalancer` | `string` | direct |
+| alb | `target_groups["app"].arn_suffix` | cloudwatch | `alarm_definitions["healthy_hosts"].dimensions.TargetGroup` | `string` | direct |
+| alb | `arn_suffix` | cloudwatch | `alarm_definitions["healthy_hosts"].dimensions.LoadBalancer` | `string` | direct |
+
+### Provider Configuration
+
+```hcl
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Application = var.service_name
+      ManagedBy   = "terraform"
+      Environment = var.environment
+      Project     = var.project
+      Owner       = var.owner
+    }
+  }
+
+  # Authentication is supplied by HCP Terraform dynamic AWS credentials
+  # from the project-level agent_AWS_Dynamic_Creds variable set.
+}
+```
+
+### Variables
+
+| Variable | Type | Required | Default | Validation | Sensitive | Description |
+|----------|------|----------|---------|------------|-----------|-------------|
+| `aws_region` | `string` | No | `"ap-southeast-2"` | Must equal `ap-southeast-2` for this deployment. | No | AWS region for all provider and module operations. |
+| `environment` | `string` | No | `"development"` | Must equal `development`. | No | Environment tag and environment-specific naming discriminator. |
+| `project` | `string` | No | `"sandbox"` | Must be non-empty. | No | Project tag value propagated through provider default tags. |
+| `owner` | `string` | Yes | -- | Must be non-empty. | No | Owner tag value for support and accountability. |
+| `service_name` | `string` | No | `"consumer-asg"` | Must match `^[a-z0-9-]+$`. | No | Canonical name prefix used for load balancer, Auto Scaling, and alarm naming. |
+| `image_id` | `string` | No | `null` | Must be `null` or start with `ami-`. | No | Optional AMI ID override used by the launch template. When omitted, Terraform discovers the latest regional Amazon Linux 2023 AMI that matches `instance_type`. |
+| `instance_type` | `string` | No | `"t3.micro"` | Must be a permitted development instance family such as `t3.micro` or `t4g.micro`. | No | EC2 instance type for the Auto Scaling Group. |
+| `instance_port` | `number` | No | `80` | Must be between `1` and `65535`. | No | Application port exposed by each instance and registered in the target group. |
+| `health_check_path` | `string` | No | `"/health"` | Must start with `/`. | No | HTTP health-check path used by the load balancer target group. |
+| `min_size` | `number` | No | `1` | Must be `>= 1` and `<= desired_capacity`. | No | Minimum instance count for the Auto Scaling Group. |
+| `desired_capacity` | `number` | No | `1` | Must be `>= min_size` and `<= max_size`. | No | Steady-state instance count for development traffic. |
+| `max_size` | `number` | No | `2` | Must be `>= desired_capacity` and `<= 2`. | No | Maximum burst capacity permitted in the sandbox environment. |
+| `cpu_target_value` | `number` | No | `60` | Must be between `10` and `90`. | No | Target CPU utilization percentage for target tracking scaling. |
+| `health_check_grace_period` | `number` | No | `300` | Must be between `0` and `900`. | No | Warm-up period before ELB health checks affect replacement decisions. |
+| `alb_ingress_cidrs` | `list(string)` | No | `[]` | Every element must be a valid IPv4 CIDR. When empty, the internal ALB allows only the default VPC CIDR. | No | Optional IPv4 CIDR ranges allowed to reach the internal ALB listener. |
+| `certificate_arn` | `string` | No | `null` | Must be `null` or start with `arn:aws:acm:`. | No | Optional ACM certificate ARN override for the preferred HTTPS ALB listener. |
+| `certificate_domain` | `string` | No | `null` | Must be `null` or a non-empty domain name. | No | Optional ACM certificate domain used to enable automatic certificate discovery when `certificate_arn` is not provided. Leaving it `null` allows the sandbox-only internal HTTP fallback. |
+| `alarm_notification_arns` | `list(string)` | No | `[]` | Each element must start with `arn:aws:sns:` when provided. | No | Optional SNS topics notified by CloudWatch alarm actions. |
+
+### Outputs
+
+| Output | Type | Source | Description |
+|--------|------|--------|-------------|
+| `alb_dns_name` | `string` | `module.alb.dns_name` | Internal DNS name of the application load balancer. |
+| `alb_security_group_id` | `string` | `module.alb.security_group_id` | Security group attached to the internal ALB front door. |
+| `target_group_arn` | `string` | `module.alb.target_groups["app"].arn` | Target group ARN used for application traffic registration. |
+| `autoscaling_group_name` | `string` | `module.autoscaling.autoscaling_group_name` | Auto Scaling Group name for operations and monitoring. |
+| `launch_template_id` | `string` | `module.autoscaling.launch_template_id` | Launch template identifier created for the compute fleet. |
+| `instance_security_group_id` | `string` | `module.instance_sg.security_group_id` | Security group ID attached to application instances. |
+
+---
+
+## 4. Security Controls
+
+| Control | Enforcement | Module Config | Reference |
+|---------|-------------|---------------|-----------|
+| Encryption at rest | Preserve the `autoscaling` module's launch-template and EBS encryption defaults; no consumer input disables storage encryption, and the AMI-backed instances inherit encrypted volume behavior supported by the explicit AMI override or AWS-managed Amazon Linux 2023 autodiscovery path. | `autoscaling`: do not set any encryption-disabling launch template or block-device overrides; preserve secure defaults from `research-security-cost.md`, using `local.autoscaling_image_id` for either the explicit AMI override or the Systems Manager public-parameter lookup. | CIS AWS Foundations Benchmark v1.5 `2.2` (EBS encryption by default); AWS Well-Architected Security `SEC08-BP01` |
+| Encryption in transit | Prefer an HTTPS ALB listener with an ACM certificate and a modern ELB security policy; permit a documented sandbox-only internal HTTP fallback when no certificate override or discovery input is available. | `alb`: `listeners` configured for `HTTPS:443` with `certificate_arn = local.listener_certificate_arn` and `ssl_policy = "ELBSecurityPolicy-TLS13-1-2-Res-2021-06"` when a certificate is provided or discovered; `[SECURITY OVERRIDE]` if `project == "sandbox"` and both `certificate_arn` plus `certificate_domain` are unset, `local.listener_protocol = "HTTP"` and `local.listener_port = 80` while `internal = true` and downstream instance access remains constrained by security groups. | AWS Well-Architected Security `SEC09-BP01` |
+| Public access | Keep the ALB internal-only and keep instances non-public by allowing inbound instance traffic only from the ALB security group. | `alb`: `internal = true` and listener ingress limited to the default VPC CIDR or a narrower override from `alb_ingress_cidrs`; `instance_sg`: `computed_ingress_with_source_security_group_id = module.alb.security_group_id`; `autoscaling`: instances receive only `module.instance_sg.security_group_id`. | AWS Well-Architected Security `SEC05-BP01`; CIS AWS Foundations Benchmark v1.5 `5.1` |
+| Egress minimization | Deny unrestricted outbound internet access from application instances and rely on security-group statefulness for response traffic to ALB-initiated requests. | `instance_sg`: `egress_rules = []`, `egress_cidr_blocks = []`, and `egress_ipv6_cidr_blocks = []`. | AWS Well-Architected Security `SEC05-BP01`; Amazon VPC security groups guidance |
+| IAM least privilege | Use HCP Terraform dynamic AWS credentials from the shared project variable set, avoid static keys, and rely on module-managed service integration rather than broad consumer-defined IAM policies. | `provider.aws`: authentication via `agent_AWS_Dynamic_Creds`; no `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`; `autoscaling`, `alb`, and `cloudwatch` receive only the specific identifiers they need. | AWS Well-Architected Security `SEC03-BP01`, `SEC03-BP02` |
+| Logging | Enable alarm-based operational detection through the `cloudwatch` module for ASG CPU, ALB 5XX, and healthy-host metrics, while preserving AWS-managed service telemetry and not disabling any documented module monitoring defaults. | `cloudwatch`: alarm definitions for `AutoScalingGroupName`, `LoadBalancer`, and `TargetGroup` dimensions; `autoscaling` and `alb`: keep module monitoring defaults intact. | AWS Well-Architected Security `SEC04-BP02`; AWS Well-Architected Operational Excellence `OPS08-BP01` |
+| Tagging | Enforce organization-standard tags at the provider level and pass tags through each module so all deployed resources inherit `Application`, `ManagedBy`, `Environment`, `Project`, and `Owner`. | `provider.aws.default_tags`: `Application`, `ManagedBy`, `Environment`, `Project`, `Owner`; `alb`, `instance_sg`, `autoscaling`, `cloudwatch`: pass shared `tags` input. | AWS Well-Architected Operational Excellence `OPS01-BP03` |
+
+---
+
+## 5. Implementation Checklist
+
+- [x] **A: Foundation files** -- Create `versions.tf`, `backend.tf`, and `providers.tf` with Terraform/HCP Terraform settings, provider constraints, remote workspace configuration, dynamic-credentials-compatible provider setup, and required `default_tags`.
+- [x] **B: Interface files** -- Create `variables.tf`, `outputs.tf`, and `terraform.auto.tfvars.example` with every deployment input and output defined exactly as specified, including validation rules and example non-secret values.
+- [x] **C: Discovery and naming files** -- Create `data.tf` and `locals.tf` for default VPC discovery, deterministic two-AZ subnet selection, shared naming conventions, common tags, and any simple type transformations needed by module inputs.
+- [x] **D: Composition file** -- Create `main.tf` with the `alb`, `instance_sg`, `autoscaling`, and `cloudwatch` module calls wired exactly to the documented inputs, including ALB listener/target-group settings, target tracking policy, and CloudWatch alarm definitions.
+- [x] **E: Documentation file** -- Create `README.md` with deployment purpose, prerequisites, required workspace settings, apply workflow, validation commands, and destroy guidance for the sandbox environment.
+- [x] **F: Deployment-readiness update** -- Adjust `image_id` to follow an override-or-autodiscover pattern backed by the latest Amazon Linux 2023 Systems Manager public parameter for the selected `instance_type`, and refresh `README.md` plus `terraform.auto.tfvars.example` for non-interactive sandbox deployment guidance.
+- [x] **G: Sandbox certificate fallback remediation** -- Update `data.tf`, `locals.tf`, `main.tf`, `README.md`, `terraform.auto.tfvars.example`, and this design so sandbox-only runs preserve the internal ALB and least-privilege network posture while allowing an internal HTTP listener when neither `certificate_arn` nor certificate discovery is available, with explicit `[SECURITY OVERRIDE]` documentation.
+
+---
+
+## 6. Open Questions
+
+None.
+
+---

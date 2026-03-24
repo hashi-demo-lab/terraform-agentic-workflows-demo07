@@ -1,0 +1,47 @@
+alarm_notification_arns = [
+  "arn:aws:sns:ap-southeast-2:123456789012:consumer-asg-alerts",
+]
+
+alb_ingress_cidrs = []
+
+aws_region = "ap-southeast-2"
+
+# Set certificate_arn to use a specific ACM certificate.
+# Leave it null to allow optional discovery via certificate_domain or, in the
+# sandbox project only, the documented internal HTTP fallback.
+certificate_arn = null
+
+# Optional: set a certificate domain or wildcard name to re-enable HTTPS through
+# ACM discovery. Leave null for the sandbox-only fallback when no certificate is
+# available in ap-southeast-2.
+# [SECURITY OVERRIDE] Null keeps the ALB internal and least-privilege, but
+# permits HTTP only for sandbox E2E validation when no certificate can be used.
+certificate_domain = null
+
+cpu_target_value = 60
+
+desired_capacity = 1
+
+environment = "development"
+
+health_check_grace_period = 300
+
+health_check_path = "/health"
+
+# Optional: set image_id to pin a specific application AMI.
+# Leave it null to auto-discover the latest Amazon Linux 2023 AMI that matches instance_type.
+image_id = null
+
+instance_port = 80
+
+instance_type = "t3.micro"
+
+max_size = 2
+
+min_size = 1
+
+owner = "platform-team"
+
+project = "sandbox"
+
+service_name = "consumer-asg"
