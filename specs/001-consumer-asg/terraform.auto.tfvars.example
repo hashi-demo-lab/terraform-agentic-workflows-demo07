@@ -1,0 +1,42 @@
+alarm_notification_arns = [
+  "arn:aws:sns:ap-southeast-2:123456789012:consumer-asg-alerts",
+]
+
+alb_ingress_cidrs = []
+
+aws_region = "ap-southeast-2"
+
+# Set certificate_arn to use a specific ACM certificate.
+# Leave it null to auto-discover the most recent issued ACM certificate in ap-southeast-2.
+certificate_arn = null
+
+# Optional: narrow auto-discovery to a specific certificate domain or wildcard name.
+certificate_domain = "*.sandbox.example.internal"
+
+cpu_target_value = 60
+
+desired_capacity = 1
+
+environment = "development"
+
+health_check_grace_period = 300
+
+health_check_path = "/health"
+
+# Optional: set image_id to pin a specific application AMI.
+# Leave it null to auto-discover the latest Amazon Linux 2023 AMI that matches instance_type.
+image_id = null
+
+instance_port = 80
+
+instance_type = "t3.micro"
+
+max_size = 2
+
+min_size = 1
+
+owner = "platform-team"
+
+project = "sandbox"
+
+service_name = "consumer-asg"
